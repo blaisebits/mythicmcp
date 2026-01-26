@@ -57,6 +57,7 @@ Features are developed on branches named `feature/<name>`. Artifacts are stored 
 ## Active Technologies
 - Python 3.10+ + mcp (1.26.0+), mythic (0.2.10+), pydantic (001-mythic-core-tools)
 - N/A (stateless - queries Mythic server) (001-mythic-core-tools)
+- Python 3.10+ + mcp>=1.26.0, mythic>=0.2.10, pydantic>=2.0.0, hatchling (build) (002-uv-tool-install)
 
 ## Recent Changes
 - 001-mythic-core-tools: Added Python 3.10+ + mcp (1.26.0+), mythic (0.2.10+), pydantic
