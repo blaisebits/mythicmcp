@@ -2,10 +2,28 @@
 
 from __future__ import annotations
 
+import os
+from pathlib import Path
 from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+
+
+@pytest.fixture(scope="session", autouse=True)
+def load_test_env():
+    """Load test environment from .env.test if it exists."""
+    env_file = Path(__file__).parent.parent / ".env.test"
+    if env_file.exists():
+        from dotenv import load_dotenv
+        load_dotenv(env_file)
+
+
+# Marker for tests that require a real Mythic server connection
+requires_mythic = pytest.mark.skipif(
+    not os.environ.get("MYTHIC_SERVER_URL"),
+    reason="MYTHIC_SERVER_URL not set - skipping integration tests"
+)
 
 if TYPE_CHECKING:
     from mythicmcp.models import CallbackSummary

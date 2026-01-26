@@ -11,7 +11,6 @@ import logging
 from typing import TYPE_CHECKING
 
 from mcp.server.fastmcp import Context
-from mcp.types import TextContent, ToolResult
 
 from mythicmcp.models import (
     CallbackDetail,

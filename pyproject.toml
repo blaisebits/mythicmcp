@@ -32,6 +32,7 @@ dev = [
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
     "pytest-cov>=4.0.0",
+    "python-dotenv>=1.0.0",
 ]
 
 [project.scripts]
@@ -45,6 +46,9 @@ asyncio_mode = "auto"
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
+markers = [
+    "integration: marks tests as integration tests (require real Mythic server)",
+]
 
 [tool.coverage.run]
 source = ["src/mythicmcp"]
