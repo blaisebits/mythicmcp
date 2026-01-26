@@ -27,6 +27,7 @@ class MythicConfig:
         username: Username for login (requires password)
         password: Password for login (requires username)
         timeout: Query timeout in seconds (default 30)
+        plugins_dir: Directory for external plugins (optional)
     """
 
     server_url: str
@@ -34,6 +35,7 @@ class MythicConfig:
     username: Optional[str] = None
     password: Optional[str] = None
     timeout: int = 30
+    plugins_dir: Optional[str] = None
 
     def __post_init__(self) -> None:
         """Validate configuration after initialization."""
@@ -98,4 +100,5 @@ def load_config() -> MythicConfig:
         username=os.environ.get("MYTHIC_USERNAME"),
         password=os.environ.get("MYTHIC_PASSWORD"),
         timeout=timeout,
+        plugins_dir=os.environ.get("MYTHICMCP_PLUGINS_DIR"),
     )

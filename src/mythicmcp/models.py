@@ -6,9 +6,113 @@ All models include timestamps per FR-008 to indicate when data was retrieved.
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from enum import Enum
 from typing import Optional
 
 from pydantic import BaseModel, Field
+
+
+# --- Plugin System Models ---
+
+
+class TaskStatus(str, Enum):
+    """Status of a Mythic task."""
+
+    PENDING = "pending"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    ERROR = "error"
+    TIMEOUT = "timeout"
+
+
+class ExecuteTaskRequest(BaseModel):
+    """Request to execute an agent command."""
+
+    callback_id: int = Field(..., description="Target callback ID")
+    command_name: str = Field(..., description="Command to execute")
+    parameters: dict = Field(default_factory=dict, description="Command parameters")
+    timeout: int = Field(default=60, ge=30, le=300, description="Timeout in seconds")
+
+
+class TaskOutput(BaseModel):
+    """Output from a task response."""
+
+    response_id: int
+    response: str
+    timestamp: str | None = None
+
+
+class ExecuteTaskResponse(BaseModel):
+    """Response from executing an agent command."""
+
+    task_id: int = Field(..., description="Mythic task ID")
+    task_display_id: int = Field(..., description="Mythic task display ID")
+    status: TaskStatus
+    command: str
+    agent_type: str
+    callback_id: int
+    output: list[TaskOutput] = Field(default_factory=list)
+    error: str | None = None
+
+
+class PluginToolSuccessResponse(BaseModel):
+    """Successful plugin tool execution."""
+
+    success: bool = True
+    task_id: int
+    output: str
+    execution_time_ms: float
+
+
+class PluginToolErrorResponse(BaseModel):
+    """Failed plugin tool execution."""
+
+    success: bool = False
+    error: str
+    error_type: str  # "agent_mismatch", "callback_not_found", "execution_failed", "timeout"
+    callback_id: int | None = None
+    task_id: int | None = None
+
+
+class CallbackAgentInfo(BaseModel):
+    """Agent type information for a callback."""
+
+    callback_id: int
+    agent_type: str
+    active: bool
+
+
+# --- Plugin List Response ---
+
+
+class PluginInfo(BaseModel):
+    """Information about a loaded plugin."""
+
+    agent_name: str = Field(description="Agent identifier (e.g., 'apollo')")
+    agent_description: str = Field(description="Human-readable description")
+    tool_count: int = Field(description="Number of tools provided")
+    supported_os: list[str] = Field(description="Supported operating systems")
+
+
+class PluginLoadErrorInfo(BaseModel):
+    """Information about a plugin that failed to load."""
+
+    plugin_path: str = Field(description="Path or module that failed")
+    error: str = Field(description="Error message")
+
+
+class ListPluginsResponse(BaseModel):
+    """Response for core_list_plugins tool."""
+
+    plugins: list[PluginInfo] = Field(description="List of loaded plugins")
+    total_count: int = Field(description="Total number of loaded plugins")
+    load_errors: list[PluginLoadErrorInfo] = Field(
+        default_factory=list, description="Plugins that failed to load"
+    )
+    retrieved_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        description="Timestamp when data was retrieved (ISO 8601 UTC)",
+    )
 
 
 def utc_now() -> datetime:

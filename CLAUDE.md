@@ -58,6 +58,7 @@ Features are developed on branches named `feature/<name>`. Artifacts are stored 
 - Python 3.10+ + mcp (1.26.0+), mythic (0.2.10+), pydantic (001-mythic-core-tools)
 - N/A (stateless - queries Mythic server) (001-mythic-core-tools)
 - Python 3.10+ + mcp>=1.26.0, mythic>=0.2.10, pydantic>=2.0.0, hatchling (build) (002-uv-tool-install)
+- N/A (stateless - plugins are Python modules loaded from filesystem) (003-agent-plugin-system)
 
 ## Installation
 
@@ -85,6 +86,51 @@ except ExceptionGroup as eg:
     raise
 ```
 
+## Plugin System
+
+The plugin system allows agent-specific tools to be loaded dynamically. Plugins are located in:
+- `src/mythicmcp/plugins/builtin/` - Bundled plugins (Apollo, Arachne)
+- External directory via `MYTHICMCP_PLUGINS_DIR` environment variable
+
+### Creating a Plugin
+
+```python
+from mythicmcp.plugins.base import AgentPlugin, ToolDefinition
+from pydantic import BaseModel, Field
+
+class MyToolParams(BaseModel):
+    callback_id: int = Field(..., description="Target callback")
+    command: str = Field(..., description="Command to run")
+
+class MyAgentPlugin(AgentPlugin):
+    agent_name = "myagent"
+    agent_description = "My custom agent"
+    supported_os = ["Windows", "Linux"]
+
+    def get_tools(self) -> list[ToolDefinition]:
+        return [
+            ToolDefinition(
+                name="shell",
+                description="Execute shell command",
+                parameters=MyToolParams,
+                handler=self._shell_handler,
+            )
+        ]
+
+    async def _shell_handler(self, ctx, params):
+        from mythicmcp.plugins.executor import execute_with_validation
+        return await execute_with_validation(
+            ctx, params.callback_id, "myagent", "shell",
+            {"command": params.command}
+        )
+```
+
+### Available Plugins
+
+- **Apollo** (10 tools): shell, pwd, ls, cd, cat, ps, run, download, execute_assembly, screenshot
+- **Arachne** (8 tools): shell, pwd, ls, cd, rm, download, upload, execute_assembly
+
 ## Recent Changes
+- 003-agent-plugin-system: Added plugin system with Apollo (10 tools) and Arachne (8 tools) plugins, dynamic tool loading, agent type validation
 - 001-mythic-core-tools: Added Python 3.10+ + mcp (1.26.0+), mythic (0.2.10+), pydantic
 - 002-uv-tool-install: Added uv tool installation support, user-friendly startup errors, comprehensive README

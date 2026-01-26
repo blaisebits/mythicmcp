@@ -17,6 +17,9 @@ from mythicmcp.models import (
     GetCallbackResponse,
     GetOperationResponse,
     ListCallbacksResponse,
+    ListPluginsResponse,
+    PluginInfo,
+    PluginLoadErrorInfo,
 )
 
 if TYPE_CHECKING:
@@ -107,6 +110,48 @@ async def core_check_connection(
     return await impl(ctx)
 
 
+# --- Plugin Management Tools ---
+
+
+@mcp.tool()
+async def core_list_plugins(ctx: Context) -> ListPluginsResponse:
+    """List all loaded agent plugins and their tools.
+
+    Returns information about each loaded plugin including agent name,
+    description, number of tools, and supported operating systems.
+    Also reports any plugins that failed to load.
+
+    Use this to see what agent-specific tools are available.
+    """
+    from mythicmcp.plugins import get_registry
+
+    registry = get_registry()
+    plugins = []
+
+    for agent_name in registry.list_plugins():
+        loaded = registry.get_loaded_plugin(agent_name)
+        if loaded:
+            plugins.append(
+                PluginInfo(
+                    agent_name=loaded.plugin.agent_name,
+                    agent_description=loaded.plugin.agent_description,
+                    tool_count=len(loaded.tools),
+                    supported_os=loaded.plugin.supported_os,
+                )
+            )
+
+    load_errors = [
+        PluginLoadErrorInfo(plugin_path=err.plugin_path, error=err.error_message)
+        for err in registry.get_load_errors()
+    ]
+
+    return ListPluginsResponse(
+        plugins=plugins,
+        total_count=len(plugins),
+        load_errors=load_errors,
+    )
+
+
 CONFIGURATION_GUIDANCE = """
 MythicMCP Configuration Required
 ================================
@@ -131,6 +176,17 @@ See: https://github.com/user/mythicmcp#configuration
 """
 
 
+def _load_plugins() -> None:
+    """Load and register all plugins with the MCP server."""
+    from mythicmcp.plugins import load_all_plugins, register_plugin_tools
+
+    logger.info("Loading plugins...")
+    registry = load_all_plugins()
+    logger.info(f"Loaded {len(registry.list_plugins())} plugins")
+
+    register_plugin_tools(mcp)
+
+
 def main() -> None:
     """Run the MythicMCP server."""
     import sys
@@ -139,6 +195,9 @@ def main() -> None:
     from mythicmcp.connection import MythicAuthenticationError, MythicConnectionError
 
     logger.info("Starting MythicMCP server...")
+
+    # Load plugins before starting server
+    _load_plugins()
 
     try:
         mcp.run()
