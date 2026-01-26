@@ -107,10 +107,55 @@ async def core_check_connection(
     return await impl(ctx)
 
 
+CONFIGURATION_GUIDANCE = """
+MythicMCP Configuration Required
+================================
+
+MythicMCP needs connection credentials for your Mythic server.
+
+Option 1: API Token (Recommended)
+---------------------------------
+export MYTHIC_SERVER_URL="https://mythic.local:7443"
+export MYTHIC_API_TOKEN="your-api-token-here"
+
+Option 2: Username/Password
+---------------------------
+export MYTHIC_SERVER_URL="https://mythic.local:7443"
+export MYTHIC_USERNAME="mythic_admin"
+export MYTHIC_PASSWORD="your-password-here"
+
+For MCP client configuration (Claude Desktop, Cursor, etc.), add
+environment variables to your MCP server configuration file.
+
+See: https://github.com/user/mythicmcp#configuration
+"""
+
+
 def main() -> None:
     """Run the MythicMCP server."""
+    import sys
+
+    from mythicmcp.config import ConfigurationError
+    from mythicmcp.connection import MythicAuthenticationError, MythicConnectionError
+
     logger.info("Starting MythicMCP server...")
-    mcp.run()
+
+    try:
+        mcp.run()
+    except (ConfigurationError, MythicAuthenticationError, MythicConnectionError) as e:
+        # Print user-friendly guidance instead of stack trace
+        print(f"\nError: {e}\n", file=sys.stderr)
+        print(CONFIGURATION_GUIDANCE, file=sys.stderr)
+        sys.exit(1)
+    except ExceptionGroup as eg:
+        # FastMCP wraps errors in ExceptionGroup - extract and handle
+        for exc in eg.exceptions:
+            if isinstance(exc, (ConfigurationError, MythicAuthenticationError, MythicConnectionError)):
+                print(f"\nError: {exc}\n", file=sys.stderr)
+                print(CONFIGURATION_GUIDANCE, file=sys.stderr)
+                sys.exit(1)
+        # Re-raise if not a configuration error
+        raise
 
 
 if __name__ == "__main__":

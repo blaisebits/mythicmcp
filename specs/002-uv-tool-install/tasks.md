@@ -19,9 +19,9 @@
 
 **Purpose**: Verify existing infrastructure is correctly configured for uv tool installation
 
-- [ ] T001 Verify pyproject.toml has correct [project.scripts] entry point
-- [ ] T002 Verify hatchling build backend is properly configured in pyproject.toml
-- [ ] T003 Test local installation with `uv tool install .` from repository root
+- [x] T001 Verify pyproject.toml has correct [project.scripts] entry point
+- [x] T002 Verify hatchling build backend is properly configured in pyproject.toml
+- [x] T003 Test local installation with `uv tool install .` from repository root
 
 ---
 
@@ -41,10 +41,10 @@
 
 ### Implementation for User Story 1
 
-- [ ] T004 [US1] Add project.urls metadata to pyproject.toml for repository and documentation links
-- [ ] T005 [US1] Update README.md with uv tool installation instructions in README.md
-- [ ] T006 [US1] Add installation verification steps to README.md
-- [ ] T007 [US1] Test upgrade workflow with `uv tool install --upgrade .`
+- [x] T004 [US1] Add project.urls metadata to pyproject.toml for repository and documentation links
+- [x] T005 [US1] Update README.md with uv tool installation instructions in README.md
+- [x] T006 [US1] Add installation verification steps to README.md
+- [x] T007 [US1] Test upgrade workflow with `uv tool install --upgrade .`
 
 **Checkpoint**: Users can install MythicMCP with a single command and verify it's available
 
@@ -58,11 +58,11 @@
 
 ### Implementation for User Story 2
 
-- [ ] T008 [US2] Create user-friendly startup error handler in src/mythicmcp/server.py
-- [ ] T009 [US2] Add configuration guidance message with environment variable examples in src/mythicmcp/server.py
-- [ ] T010 [US2] Ensure ConfigurationError displays guidance instead of stack trace in src/mythicmcp/server.py
-- [ ] T011 [US2] Add configuration section to README.md with environment variable documentation
-- [ ] T012 [US2] Test unconfigured startup shows helpful message
+- [x] T008 [US2] Create user-friendly startup error handler in src/mythicmcp/server.py
+- [x] T009 [US2] Add configuration guidance message with environment variable examples in src/mythicmcp/server.py
+- [x] T010 [US2] Ensure ConfigurationError displays guidance instead of stack trace in src/mythicmcp/server.py
+- [x] T011 [US2] Add configuration section to README.md with environment variable documentation
+- [x] T012 [US2] Test unconfigured startup shows helpful message
 
 **Checkpoint**: Users who run the tool without configuration see clear instructions
 
@@ -76,11 +76,11 @@
 
 ### Implementation for User Story 3
 
-- [ ] T013 [P] [US3] Add Claude Desktop configuration example to README.md
-- [ ] T014 [P] [US3] Add Cursor configuration example to README.md
-- [ ] T015 [US3] Add available tools reference table to README.md
-- [ ] T016 [US3] Add troubleshooting section to README.md with common issues and solutions
-- [ ] T017 [US3] Test Claude Desktop integration with provided configuration
+- [x] T013 [P] [US3] Add Claude Desktop configuration example to README.md
+- [x] T014 [P] [US3] Add Cursor configuration example to README.md
+- [x] T015 [US3] Add available tools reference table to README.md
+- [x] T016 [US3] Add troubleshooting section to README.md with common issues and solutions
+- [ ] T017 [US3] Test Claude Desktop integration with provided configuration (manual test - skipped)
 
 **Checkpoint**: Users can configure their AI assistant using provided examples
 
@@ -90,11 +90,11 @@
 
 **Purpose**: Final documentation and validation
 
-- [ ] T018 [P] Copy quickstart.md content to appropriate README.md sections
-- [ ] T019 [P] Add badges to README.md (Python version, license, MCP version)
-- [ ] T020 Verify all README.md links work correctly
-- [ ] T021 Run end-to-end validation: fresh install → configure → connect client
-- [ ] T022 Update CLAUDE.md with any new patterns or conventions
+- [x] T018 [P] Copy quickstart.md content to appropriate README.md sections
+- [x] T019 [P] Add badges to README.md (Python version, license, MCP version)
+- [x] T020 Verify all README.md links work correctly
+- [x] T021 Run end-to-end validation: fresh install → configure → connect client (install/config tested; client connection requires Mythic server)
+- [x] T022 Update CLAUDE.md with any new patterns or conventions
 
 ---
 

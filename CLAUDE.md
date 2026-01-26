@@ -59,5 +59,32 @@ Features are developed on branches named `feature/<name>`. Artifacts are stored 
 - N/A (stateless - queries Mythic server) (001-mythic-core-tools)
 - Python 3.10+ + mcp>=1.26.0, mythic>=0.2.10, pydantic>=2.0.0, hatchling (build) (002-uv-tool-install)
 
+## Installation
+
+Install as a global tool using uv:
+
+```bash
+uv tool install mythicmcp
+```
+
+The `mythicmcp` command will be available in your PATH after installation.
+
+## Error Handling Pattern
+
+Configuration errors display user-friendly guidance instead of stack traces. The pattern in `server.py`:
+
+```python
+try:
+    mcp.run()
+except ExceptionGroup as eg:
+    # FastMCP wraps errors in ExceptionGroup - extract and handle
+    for exc in eg.exceptions:
+        if isinstance(exc, ConfigurationError):
+            print(CONFIGURATION_GUIDANCE, file=sys.stderr)
+            sys.exit(1)
+    raise
+```
+
 ## Recent Changes
 - 001-mythic-core-tools: Added Python 3.10+ + mcp (1.26.0+), mythic (0.2.10+), pydantic
+- 002-uv-tool-install: Added uv tool installation support, user-friendly startup errors, comprehensive README
