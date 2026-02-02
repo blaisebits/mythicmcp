@@ -17,9 +17,11 @@ from mythicmcp.models import (
     GetCallbackResponse,
     GetOperationResponse,
     ListCallbacksResponse,
+    ListOperationsResponse,
     ListPluginsResponse,
     PluginInfo,
     PluginLoadErrorInfo,
+    SetOperationResponse,
 )
 
 if TYPE_CHECKING:
@@ -70,6 +72,33 @@ async def core_get_callback(ctx: Context, callback_id: int) -> GetCallbackRespon
 
 
 # --- Operation Tools (User Story 2) ---
+
+
+@mcp.tool()
+async def core_list_operations(ctx: Context) -> ListOperationsResponse:
+    """List all operations the authenticated user has access to.
+
+    Returns operation names, IDs, completion status, and admin info.
+    Use this to find available operations before setting one as current.
+    """
+    from mythicmcp.tools.operations import core_list_operations as impl
+
+    return await impl(ctx)
+
+
+@mcp.tool()
+async def core_set_operation(ctx: Context, operation_id: int) -> SetOperationResponse:
+    """Set the current operation for this session.
+
+    Changes the active operation context for all subsequent tool calls.
+    Use core_list_operations first to find available operation IDs.
+
+    Args:
+        operation_id: The operation ID to set as current (required)
+    """
+    from mythicmcp.tools.operations import core_set_operation as impl
+
+    return await impl(ctx, operation_id)
 
 
 @mcp.tool()

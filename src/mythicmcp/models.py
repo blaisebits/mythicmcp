@@ -209,6 +209,42 @@ class GetOperationResponse(BaseModel):
     )
 
 
+class OperationSummary(BaseModel):
+    """Summary view of a Mythic operation for list operations."""
+
+    id: int = Field(description="Operation ID")
+    name: str = Field(description="Operation name")
+    complete: bool = Field(description="Whether operation is complete")
+    admin_username: str = Field(description="Operation admin username")
+
+
+class ListOperationsResponse(BaseModel):
+    """Response for core_list_operations tool."""
+
+    operations: list[OperationSummary] = Field(description="List of accessible operations")
+    count: int = Field(description="Total number of operations")
+    current_operation_id: Optional[int] = Field(
+        default=None, description="Currently active operation ID (if set)"
+    )
+    retrieved_at: datetime = Field(
+        default_factory=utc_now,
+        description="Timestamp when data was retrieved (ISO 8601 UTC)",
+    )
+
+
+class SetOperationResponse(BaseModel):
+    """Response for core_set_operation tool."""
+
+    success: bool = Field(description="Whether operation was set successfully")
+    operation_id: int = Field(description="The operation ID that was set")
+    operation_name: str = Field(description="The operation name that was set")
+    message: str = Field(description="Status message")
+    retrieved_at: datetime = Field(
+        default_factory=utc_now,
+        description="Timestamp when operation was set (ISO 8601 UTC)",
+    )
+
+
 # --- Connection Status Models ---
 
 

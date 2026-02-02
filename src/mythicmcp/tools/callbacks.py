@@ -245,19 +245,20 @@ async def core_list_callbacks(ctx: Context) -> ListCallbacksResponse:
     Returns hostname, username, agent type, and other key details for each callback.
     Use this to get an overview of all active access in the engagement.
     """
-    from mcp.server.fastmcp import ToolError
+    from mcp.shared.exceptions import McpError
+    from mcp.types import ErrorData
 
     mythic_ctx: MythicContext = ctx.request_context.lifespan_context
 
     try:
         return await list_callbacks(mythic_ctx.mythic)
     except NoOperationSetError as e:
-        raise ToolError(str(e))
+        raise McpError(ErrorData(code=-1, message=str(e)))
     except CallbackError as e:
-        raise ToolError(str(e))
+        raise McpError(ErrorData(code=-1, message=str(e)))
     except Exception as e:
         logger.exception("Unexpected error in core_list_callbacks")
-        raise ToolError(f"Unexpected error: {type(e).__name__}")
+        raise McpError(ErrorData(code=-1, message=f"Unexpected error: {type(e).__name__}"))
 
 
 async def core_get_callback(ctx: Context, callback_id: int) -> GetCallbackResponse:
@@ -269,18 +270,19 @@ async def core_get_callback(ctx: Context, callback_id: int) -> GetCallbackRespon
     Args:
         callback_id: The callback ID to retrieve (required)
     """
-    from mcp.server.fastmcp import ToolError
+    from mcp.shared.exceptions import McpError
+    from mcp.types import ErrorData
 
     mythic_ctx: MythicContext = ctx.request_context.lifespan_context
 
     try:
         return await get_callback_by_id(mythic_ctx.mythic, callback_id)
     except CallbackNotFoundError as e:
-        raise ToolError(str(e))
+        raise McpError(ErrorData(code=-1, message=str(e)))
     except NoOperationSetError as e:
-        raise ToolError(str(e))
+        raise McpError(ErrorData(code=-1, message=str(e)))
     except CallbackError as e:
-        raise ToolError(str(e))
+        raise McpError(ErrorData(code=-1, message=str(e)))
     except Exception as e:
         logger.exception("Unexpected error in core_get_callback")
-        raise ToolError(f"Unexpected error: {type(e).__name__}")
+        raise McpError(ErrorData(code=-1, message=f"Unexpected error: {type(e).__name__}"))

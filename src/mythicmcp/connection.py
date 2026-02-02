@@ -9,6 +9,7 @@ import logging
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, AsyncIterator
+from urllib.parse import urlparse
 
 from mythic import mythic
 
@@ -46,6 +47,23 @@ class MythicContext:
     config: MythicConfig
 
 
+def _parse_server_url(server_url: str) -> tuple[str, int, bool]:
+    """Parse server URL into host, port, and ssl components.
+
+    Args:
+        server_url: Full URL like https://localhost:7443
+
+    Returns:
+        Tuple of (host, port, use_ssl)
+    """
+    parsed = urlparse(server_url)
+    host = parsed.hostname or "localhost"
+    use_ssl = parsed.scheme == "https"
+    default_port = 7443 if use_ssl else 7444
+    port = parsed.port or default_port
+    return host, port, use_ssl
+
+
 async def connect_to_mythic(config: MythicConfig) -> mythic_classes.Mythic:
     """Establish connection to Mythic server.
 
@@ -59,16 +77,22 @@ async def connect_to_mythic(config: MythicConfig) -> mythic_classes.Mythic:
         MythicConnectionError: If server is unreachable
         MythicAuthenticationError: If authentication fails
     """
+    host, port, use_ssl = _parse_server_url(config.server_url)
+
     try:
         if config.uses_api_token:
             mythic_instance = await mythic.login(
-                server_ip=config.server_url,
+                server_ip=host,
+                server_port=port,
+                ssl=use_ssl,
                 apitoken=config.api_token,
                 timeout=config.timeout,
             )
         else:
             mythic_instance = await mythic.login(
-                server_ip=config.server_url,
+                server_ip=host,
+                server_port=port,
+                ssl=use_ssl,
                 username=config.username,
                 password=config.password,
                 timeout=config.timeout,

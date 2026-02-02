@@ -12,13 +12,12 @@ import logging
 import os
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Coroutine
+from typing import Any, Callable, Coroutine
+
+from mcp.server.fastmcp import Context, FastMCP
 
 from mythicmcp.plugins.base import AgentPlugin, ToolDefinition
 from mythicmcp.plugins.registry import LoadedPlugin, PluginLoadError, PluginRegistry
-
-if TYPE_CHECKING:
-    from mcp.server.fastmcp import Context, FastMCP
 
 logger = logging.getLogger(__name__)
 
