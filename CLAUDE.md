@@ -59,6 +59,7 @@ Features are developed on branches named `feature/<name>`. Artifacts are stored 
 - N/A (stateless - queries Mythic server) (001-mythic-core-tools)
 - Python 3.10+ + mcp>=1.26.0, mythic>=0.2.10, pydantic>=2.0.0, hatchling (build) (002-uv-tool-install)
 - N/A (stateless - plugins are Python modules loaded from filesystem) (003-agent-plugin-system)
+- N/A (stateless - files stored on Mythic server) (004-core-file-tools)
 
 ## Installation
 
@@ -130,7 +131,30 @@ class MyAgentPlugin(AgentPlugin):
 - **Apollo** (10 tools): shell, pwd, ls, cd, cat, ps, run, download, execute_assembly, screenshot
 - **Arachne** (8 tools): shell, pwd, ls, cd, rm, download, upload, execute_assembly
 
+## Core Tools
+
+The MCP server exposes these core tools for Mythic operations:
+
+### Callback Tools
+- `core_list_callbacks` - List all active callbacks in current operation
+- `core_get_callback` - Get detailed callback information by ID
+
+### Operation Tools
+- `core_list_operations` - List all accessible operations
+- `core_set_operation` - Set current operation context
+- `core_get_operation` - Get operation details
+
+### Status Tools
+- `core_check_connection` - Verify Mythic server connectivity
+- `core_list_plugins` - List loaded agent plugins
+
+### File Tools
+- `core_upload_file` - Upload file to Mythic for agent tasking (returns file_id)
+- `core_download_file` - Download file from Mythic by UUID (base64-encoded content)
+- `core_list_downloaded_files` - List files downloaded from agents
+- `core_list_uploaded_files` - List files uploaded to Mythic
+
 ## Recent Changes
+- 004-core-file-tools: Added 4 file management tools (upload, download, list downloaded/uploaded), base64 content encoding, file metadata via GraphQL
 - 003-agent-plugin-system: Added plugin system with Apollo (10 tools) and Arachne (8 tools) plugins, dynamic tool loading, agent type validation
 - 001-mythic-core-tools: Added Python 3.10+ + mcp (1.26.0+), mythic (0.2.10+), pydantic
-- 002-uv-tool-install: Added uv tool installation support, user-friendly startup errors, comprehensive README

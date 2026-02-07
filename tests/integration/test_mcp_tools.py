@@ -15,6 +15,13 @@ EXPECTED_TOOLS = {
     "core_get_callback",
     "core_get_operation",
     "core_check_connection",
+    "core_list_operations",
+    "core_set_operation",
+    "core_list_plugins",
+    "core_upload_file",
+    "core_download_file",
+    "core_list_downloaded_files",
+    "core_list_uploaded_files",
 }
 
 
