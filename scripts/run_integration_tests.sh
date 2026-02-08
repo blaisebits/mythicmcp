@@ -35,7 +35,7 @@ run_quick() {
     echo ""
     echo "Running quick tool registration tests..."
     echo "----------------------------------------------"
-    uv run pytest tests/integration/test_mcp_tools.py -v
+    uv run pytest tests/unit/test_mcp_tools.py tests/unit/test_file_tools.py -v
 }
 
 case "${1:-}" in
