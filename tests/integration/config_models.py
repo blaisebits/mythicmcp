@@ -80,7 +80,7 @@ class TestCommandConfig(BaseModel):
     """Test command configuration for a specific agent type."""
 
     command: str
-    parameters: dict[str, Any] = Field(default_factory=dict)
+    parameters: str | dict[str, Any] = ""
     expected_output: str | None = None
     timeout: int = 60
 

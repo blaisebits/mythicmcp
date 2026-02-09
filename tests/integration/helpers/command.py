@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import re
 
 from tests.integration.config_models import TestCommandConfig
@@ -37,9 +38,16 @@ async def execute_test_command(
     task_id = task["id"]
     output_parts = await mythic.get_all_task_output_by_id(mythic_instance, task_id)
 
-    # Combine all output parts
+    # Combine all output parts — responses use base64-encoded response_text
     if isinstance(output_parts, list):
-        output = "".join(part.get("output", "") for part in output_parts)
+        decoded_parts = []
+        for part in output_parts:
+            raw = part.get("response_text", "")
+            try:
+                decoded_parts.append(base64.b64decode(raw).decode("utf-8", errors="replace"))
+            except Exception:
+                decoded_parts.append(raw)
+        output = "".join(decoded_parts)
     else:
         output = str(output_parts)
 

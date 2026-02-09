@@ -2,7 +2,21 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from tests.integration.config_models import AgentConfig
+
+
+def _stamp_filename(filename: str) -> str:
+    """Insert a UTC timestamp before the file extension for tracking.
+
+    Example: apollo_test.exe -> apollo_test_20260208_143012.exe
+    """
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    dot_idx = filename.rfind(".")
+    if dot_idx == -1:
+        return f"{filename}_{stamp}"
+    return f"{filename[:dot_idx]}_{stamp}{filename[dot_idx:]}"
 
 
 class PayloadBuildError(Exception):
@@ -46,13 +60,15 @@ async def generate_payload(
         for param in agent_config.build_parameters
     ]
 
+    stamped_name = _stamp_filename(agent_config.filename)
+
     result = await mythic.create_payload(
         mythic_instance,
         payload_type_name=agent_config.payload_type,
         operating_system=agent_config.os,
         c2_profiles=c2_profiles,
         build_parameters=build_parameters,
-        filename=agent_config.filename,
+        filename=stamped_name,
         description=agent_config.description,
         return_on_complete=True,
         timeout=timeout,

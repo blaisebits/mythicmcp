@@ -7,6 +7,7 @@ import pytest
 from tests.integration.config_models import IntegrationTestConfig
 from tests.integration.helpers.callback import get_baseline_callback_ids
 from tests.integration.helpers.deployment import (
+    kill_existing_payload_process,
     upload_payload_to_target,
     execute_payload_on_target,
 )
@@ -41,6 +42,11 @@ class TestPayloadDeployment:
                 assert payload_bytes, f"No payload bytes for {agent_name}/{target.name}"
 
                 try:
+                    # Kill any leftover process from a prior run to avoid file locks
+                    await kill_existing_payload_process(
+                        mythic_instance, target
+                    )
+
                     # Capture baseline callback IDs before upload
                     baseline_ids = await get_baseline_callback_ids(mythic_instance)
                     s["baseline_callback_ids"] = baseline_ids

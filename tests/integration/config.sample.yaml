@@ -73,8 +73,7 @@ targets:
 test_commands:
   apollo:
     - command: "shell"
-      parameters:
-        command: "whoami"
+      parameters: "whoami"       # Shell/run commands take a raw string
       expected_output: "\\"      # Substring match: domain\user contains backslash
       timeout: 60
     - command: "pwd"
@@ -84,8 +83,7 @@ test_commands:
 
   arachne:
     - command: "shell"
-      parameters:
-        command: "id"
+      parameters: "id"           # Shell commands take a raw string
       expected_output: "uid="    # Substring match: uid=1000(user)
       timeout: 60
     - command: "pwd"

@@ -27,15 +27,15 @@ async def cleanup_payload_on_target(
     from mythic import mythic
 
     if target.os == "Windows":
-        command_str = f'del /f "{target.upload_path}"'
+        command_str = f"del {target.upload_path}"
     else:
         command_str = f"rm -f {target.upload_path}"
 
     try:
         await mythic.issue_task(
             mythic_instance,
-            command_name="shell",
-            parameters={"command": command_str},
+            command_name="run",
+            parameters=command_str,
             callback_display_id=target.callback_id,
             wait_for_complete=True,
             timeout=30,
