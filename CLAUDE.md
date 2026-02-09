@@ -60,6 +60,8 @@ Features are developed on branches named `feature/<name>`. Artifacts are stored 
 - Python 3.10+ + mcp>=1.26.0, mythic>=0.2.10, pydantic>=2.0.0, hatchling (build) (002-uv-tool-install)
 - N/A (stateless - plugins are Python modules loaded from filesystem) (003-agent-plugin-system)
 - N/A (stateless - files stored on Mythic server) (004-core-file-tools)
+- Python 3.10+ + pytest, pytest-asyncio, pyyaml, pydantic, mythic (0.2.10+) (005-integration-testing)
+- N/A (stateless — tests interact with Mythic server and target systems) (005-integration-testing)
 
 ## Installation
 
@@ -155,6 +157,6 @@ The MCP server exposes these core tools for Mythic operations:
 - `core_list_uploaded_files` - List files uploaded to Mythic
 
 ## Recent Changes
+- 005-integration-testing: Added Python 3.10+ + pytest, pytest-asyncio, pyyaml, pydantic, mythic (0.2.10+)
 - 004-core-file-tools: Added 4 file management tools (upload, download, list downloaded/uploaded), base64 content encoding, file metadata via GraphQL
 - 003-agent-plugin-system: Added plugin system with Apollo (10 tools) and Arachne (8 tools) plugins, dynamic tool loading, agent type validation
-- 001-mythic-core-tools: Added Python 3.10+ + mcp (1.26.0+), mythic (0.2.10+), pydantic
