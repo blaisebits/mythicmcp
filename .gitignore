@@ -39,6 +39,7 @@ ENV/
 htmlcov/
 .tox/
 .nox/
+tests/integration/config.yaml
 
 # Environment
 .env

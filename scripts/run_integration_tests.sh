@@ -35,7 +35,14 @@ run_quick() {
     echo ""
     echo "Running quick tool registration tests..."
     echo "----------------------------------------------"
-    uv run pytest tests/integration/test_mcp_tools.py -v
+    uv run pytest tests/unit/test_mcp_tools.py tests/unit/test_file_tools.py -v
+}
+
+run_pipeline() {
+    echo ""
+    echo "Running full integration test pipeline..."
+    echo "----------------------------------------------"
+    uv run pytest tests/integration/ -v -m integration
 }
 
 case "${1:-}" in
@@ -44,6 +51,9 @@ case "${1:-}" in
         ;;
     --mcp)
         run_mcp_check
+        ;;
+    --pipeline)
+        run_pipeline
         ;;
     --all)
         run_mcp_check

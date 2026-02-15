@@ -276,3 +276,121 @@ class CheckConnectionErrorResponse(BaseModel):
         default_factory=utc_now,
         description="Timestamp when check was performed (ISO 8601 UTC)",
     )
+
+
+# --- File Management Models ---
+
+
+class UploadFileResponse(BaseModel):
+    """Response for core_upload_file tool (success case)."""
+
+    success: bool = Field(default=True, description="Whether upload succeeded")
+    file_id: str = Field(description="UUID of uploaded file (for use in tasking)")
+    filename: str = Field(description="Filename as stored")
+    message: str = Field(description="Status message")
+    retrieved_at: datetime = Field(
+        default_factory=utc_now,
+        description="Timestamp of operation (ISO 8601 UTC)",
+    )
+
+
+class UploadFileErrorResponse(BaseModel):
+    """Response for core_upload_file tool (error case)."""
+
+    success: bool = Field(default=False, description="Always false for errors")
+    error: str = Field(description="Error message")
+    error_type: str = Field(
+        description="Error category: invalid_input, connection_error, no_operation"
+    )
+    retrieved_at: datetime = Field(
+        default_factory=utc_now,
+        description="Timestamp of operation (ISO 8601 UTC)",
+    )
+
+
+class DownloadFileResponse(BaseModel):
+    """Response for core_download_file tool (success case)."""
+
+    success: bool = Field(default=True, description="Whether download succeeded")
+    file_uuid: str = Field(description="UUID of downloaded file")
+    filename: str = Field(description="Original filename")
+    content: str = Field(description="Base64-encoded file content")
+    size_bytes: int = Field(description="File size in bytes (before encoding)")
+    md5: Optional[str] = Field(default=None, description="MD5 hash if available")
+    sha1: Optional[str] = Field(default=None, description="SHA1 hash if available")
+    retrieved_at: datetime = Field(
+        default_factory=utc_now,
+        description="Timestamp of operation (ISO 8601 UTC)",
+    )
+
+
+class DownloadFileErrorResponse(BaseModel):
+    """Response for core_download_file tool (error case)."""
+
+    success: bool = Field(default=False, description="Always false for errors")
+    error: str = Field(description="Error message")
+    error_type: str = Field(
+        description="Error category: not_found, connection_error, no_operation"
+    )
+    file_uuid: str = Field(description="Requested UUID")
+    retrieved_at: datetime = Field(
+        default_factory=utc_now,
+        description="Timestamp of operation (ISO 8601 UTC)",
+    )
+
+
+class DownloadedFileSummary(BaseModel):
+    """Summary of a file downloaded from an agent."""
+
+    id: int = Field(description="Internal Mythic file ID")
+    file_uuid: str = Field(description="File UUID (agent_file_id)")
+    filename: str = Field(description="Filename (UTF-8)")
+    full_remote_path: str = Field(description="Full path on target system")
+    host: str = Field(description="Source hostname")
+    size_bytes: Optional[int] = Field(default=None, description="File size if known")
+    complete: bool = Field(description="Whether download completed")
+    timestamp: datetime = Field(description="Download timestamp")
+    md5: Optional[str] = Field(default=None, description="MD5 hash")
+    sha1: Optional[str] = Field(default=None, description="SHA1 hash")
+    comment: str = Field(default="", description="File comment")
+    callback_id: Optional[int] = Field(default=None, description="Source callback ID")
+    callback_display_id: Optional[int] = Field(
+        default=None, description="Source callback display number"
+    )
+    task_id: Optional[int] = Field(
+        default=None, description="Task that initiated download"
+    )
+
+
+class ListDownloadedFilesResponse(BaseModel):
+    """Response for core_list_downloaded_files tool."""
+
+    files: list[DownloadedFileSummary] = Field(description="List of downloaded files")
+    count: int = Field(description="Total number of files")
+    retrieved_at: datetime = Field(
+        default_factory=utc_now,
+        description="Timestamp of query (ISO 8601 UTC)",
+    )
+
+
+class UploadedFileSummary(BaseModel):
+    """Summary of a file uploaded to Mythic."""
+
+    id: int = Field(description="Internal Mythic file ID")
+    file_id: str = Field(description="File UUID (agent_file_id) for tasking")
+    filename: str = Field(description="Filename (UTF-8)")
+    complete: bool = Field(description="Whether upload completed")
+    timestamp: datetime = Field(description="Upload timestamp")
+    comment: str = Field(default="", description="File comment")
+    operator: str = Field(description="Username who uploaded")
+
+
+class ListUploadedFilesResponse(BaseModel):
+    """Response for core_list_uploaded_files tool."""
+
+    files: list[UploadedFileSummary] = Field(description="List of uploaded files")
+    count: int = Field(description="Total number of files")
+    retrieved_at: datetime = Field(
+        default_factory=utc_now,
+        description="Timestamp of query (ISO 8601 UTC)",
+    )

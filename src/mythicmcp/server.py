@@ -14,14 +14,20 @@ from mythicmcp.connection import mythic_lifespan
 from mythicmcp.models import (
     CheckConnectionErrorResponse,
     CheckConnectionResponse,
+    DownloadFileErrorResponse,
+    DownloadFileResponse,
     GetCallbackResponse,
     GetOperationResponse,
     ListCallbacksResponse,
+    ListDownloadedFilesResponse,
     ListOperationsResponse,
     ListPluginsResponse,
+    ListUploadedFilesResponse,
     PluginInfo,
     PluginLoadErrorInfo,
     SetOperationResponse,
+    UploadFileErrorResponse,
+    UploadFileResponse,
 )
 
 if TYPE_CHECKING:
@@ -179,6 +185,71 @@ async def core_list_plugins(ctx: Context) -> ListPluginsResponse:
         total_count=len(plugins),
         load_errors=load_errors,
     )
+
+
+# --- File Management Tools ---
+
+
+@mcp.tool()
+async def core_upload_file(
+    ctx: Context,
+    filename: str,
+    content: str,
+) -> UploadFileResponse | UploadFileErrorResponse:
+    """Upload a file to the Mythic server for use in agent tasking operations.
+
+    The file will be stored on the Mythic server and can be used with agent
+    upload commands (e.g., apollo_upload) by referencing the returned file_id.
+
+    Args:
+        filename: Name for the file on Mythic server
+        content: Base64-encoded file content
+    """
+    from mythicmcp.tools.files import core_upload_file as impl
+
+    return await impl(ctx, filename, content)
+
+
+@mcp.tool()
+async def core_download_file(
+    ctx: Context,
+    file_uuid: str,
+) -> DownloadFileResponse | DownloadFileErrorResponse:
+    """Download a file from the Mythic server by its UUID.
+
+    Returns the file content as base64-encoded string along with metadata
+    including filename, size, and hash values.
+
+    Args:
+        file_uuid: UUID of the file to download
+    """
+    from mythicmcp.tools.files import core_download_file as impl
+
+    return await impl(ctx, file_uuid)
+
+
+@mcp.tool()
+async def core_list_downloaded_files(ctx: Context) -> ListDownloadedFilesResponse:
+    """List all files downloaded from agents in the current operation.
+
+    Returns file metadata including filename, source host, callback ID,
+    and hash values for each file downloaded from target systems.
+    """
+    from mythicmcp.tools.files import core_list_downloaded_files as impl
+
+    return await impl(ctx)
+
+
+@mcp.tool()
+async def core_list_uploaded_files(ctx: Context) -> ListUploadedFilesResponse:
+    """List all files uploaded to the Mythic server in the current operation.
+
+    Returns file metadata including file_id (for use in agent tasking),
+    filename, upload timestamp, and operator who uploaded each file.
+    """
+    from mythicmcp.tools.files import core_list_uploaded_files as impl
+
+    return await impl(ctx)
 
 
 CONFIGURATION_GUIDANCE = """
