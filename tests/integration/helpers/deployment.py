@@ -54,6 +54,45 @@ async def kill_existing_payload_process(
         )
 
 
+async def delete_existing_payload_file(
+    mythic_instance,
+    target: TargetConfig,
+) -> None:
+    """Delete any existing payload file on disk before uploading a new one.
+
+    Best-effort: logs a warning on failure instead of raising.
+    Must run after kill_existing_payload_process to avoid "file in use" errors.
+
+    Args:
+        mythic_instance: Authenticated Mythic connection.
+        target: Target system config (includes upload_path and callback_id).
+    """
+    from mythic import mythic
+
+    if target.os == "Windows":
+        command_str = f"del /F {target.upload_path}"
+    else:
+        command_str = f"rm -f {target.upload_path}"
+
+    try:
+        await mythic.issue_task(
+            mythic_instance,
+            command_name="shell",
+            parameters=command_str,
+            callback_display_id=target.callback_id,
+            wait_for_complete=True,
+            timeout=30,
+        )
+        logger.info("Deleted existing payload file '%s' on %s", target.upload_path, target.name)
+    except Exception as e:
+        logger.info(
+            "No existing payload file '%s' to delete on %s (or delete failed: %s)",
+            target.upload_path,
+            target.name,
+            e,
+        )
+
+
 async def upload_payload_to_target(
     mythic_instance,
     payload_bytes: bytes,

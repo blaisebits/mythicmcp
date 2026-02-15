@@ -1,0 +1,90 @@
+agent:
+  name: arachne
+  description: "Arachne webshell agent (ASPX/PHP/JSP)"
+  supported_os:
+    - Windows
+    - Linux
+
+commands:
+  - name: shell
+    description: "Execute a shell command on an Arachne webshell callback"
+    mythic_command: shell
+    timeout: 60
+    parameters:
+      - name: command
+        type: string
+        description: "Command to execute"
+        required: true
+
+  - name: pwd
+    description: "Get current working directory of an Arachne webshell"
+    mythic_command: pwd
+    timeout: 60
+
+  - name: ls
+    description: "List directory contents on an Arachne webshell"
+    mythic_command: ls
+    timeout: 60
+    parameters:
+      - name: path
+        type: string
+        description: "Path to list (default: current directory)"
+        default: "."
+
+  - name: cd
+    description: "Change working directory on an Arachne webshell"
+    mythic_command: cd
+    timeout: 60
+    parameters:
+      - name: path
+        type: string
+        description: "Path to change to"
+        required: true
+
+  - name: rm
+    description: "Remove a file on an Arachne webshell"
+    mythic_command: rm
+    timeout: 60
+    parameters:
+      - name: path
+        type: string
+        description: "Path to file to remove"
+        required: true
+
+  - name: download
+    description: "Download a file from an Arachne webshell callback"
+    mythic_command: download
+    timeout: 120
+    parameters:
+      - name: path
+        type: string
+        description: "Path to file to download"
+        required: true
+
+  - name: upload
+    description: "Upload a file to an Arachne webshell callback"
+    mythic_command: upload
+    timeout: 120
+    parameters:
+      - name: remote_path
+        type: string
+        description: "Destination path on target"
+        required: true
+      - name: file_contents
+        type: string
+        description: "Base64-encoded file contents"
+        required: true
+
+  - name: execute_assembly
+    description: "Execute a .NET assembly on an Arachne ASPX webshell (Windows only)"
+    mythic_command: execute_assembly
+    timeout: 120
+    parameters:
+      - name: assembly_name
+        type: string
+        description: "Name of registered .NET assembly"
+        required: true
+      - name: assembly_arguments
+        type: string
+        description: "Arguments to pass to assembly"
+        default: ""
