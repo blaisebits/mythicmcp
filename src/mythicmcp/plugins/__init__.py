@@ -18,6 +18,11 @@ from mcp.server.fastmcp import Context, FastMCP
 
 from mythicmcp.plugins.base import AgentPlugin, ToolDefinition
 from mythicmcp.plugins.registry import LoadedPlugin, PluginLoadError, PluginRegistry
+from mythicmcp.plugins.yaml_loader import (
+    YamlConfigError,
+    discover_yaml_configs,
+    load_yaml_plugin,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -194,15 +199,59 @@ def _load_builtin_plugin_module(module_name: str) -> AgentPlugin | None:
         return None
 
 
+def _load_yaml_configs_from_dir(directory: Path) -> None:
+    """Discover and load YAML config files from a directory.
+
+    Args:
+        directory: Directory to search for YAML config files.
+    """
+    yaml_paths = discover_yaml_configs(directory)
+    for yaml_path in yaml_paths:
+        start_time = time.perf_counter()
+        result = load_yaml_plugin(yaml_path)
+        if isinstance(result, YamlConfigError):
+            logger.warning(str(result))
+            _registry.add_load_error(PluginLoadError(
+                plugin_path=str(yaml_path),
+                error_type="validation_error",
+                error_message=str(result),
+            ))
+            continue
+
+        plugin = result
+        load_time_ms = (time.perf_counter() - start_time) * 1000
+        if _registry.register_plugin(plugin, load_time_ms):
+            logger.info(
+                f"Registered YAML plugin '{plugin.agent_name}' "
+                f"with {len(plugin.get_tools())} tools from {yaml_path.name}"
+            )
+
+
 def load_all_plugins() -> PluginRegistry:
     """Load all available plugins (builtin and external).
+
+    YAML configs are loaded first, then Python modules. If a YAML config
+    and a Python module define the same agent name, the YAML version takes
+    precedence and the Python module is skipped with a warning.
 
     Returns:
         The populated PluginRegistry instance.
     """
-    # Load builtin plugins by module import (more reliable than file discovery)
+    # Phase 1: Load YAML configs from builtin directory
+    builtin_dir = Path(__file__).parent / "builtin"
+    _load_yaml_configs_from_dir(builtin_dir)
+
+    # Phase 2: Load YAML configs from external directory
+    external_dir = os.environ.get("MYTHICMCP_PLUGINS_DIR")
+    if external_dir:
+        external_path = Path(external_dir)
+        _load_yaml_configs_from_dir(external_path)
+
+    # Phase 3: Check for duplicate agent names across all loaded YAML configs
+    # (handled by PluginRegistry.register_plugin which rejects duplicates)
+
+    # Phase 4: Load builtin code-based plugins (skip if agent already loaded from YAML)
     builtin_modules = [
-        "mythicmcp.plugins.builtin.apollo",
         "mythicmcp.plugins.builtin.arachne",
     ]
 
@@ -210,16 +259,28 @@ def load_all_plugins() -> PluginRegistry:
         start_time = time.perf_counter()
         plugin = _load_builtin_plugin_module(module_name)
         if plugin:
+            if _registry.get_plugin(plugin.agent_name) is not None:
+                logger.warning(
+                    f"Skipping Python module '{module_name}': agent '{plugin.agent_name}' "
+                    f"already loaded from YAML config"
+                )
+                continue
             load_time_ms = (time.perf_counter() - start_time) * 1000
             _registry.register_plugin(plugin, load_time_ms)
             logger.info(f"Registered plugin '{plugin.agent_name}' with {len(plugin.get_tools())} tools")
 
-    # Load external plugins from configured directory
+    # Phase 5: Load external code-based plugins (skip if agent already loaded)
     external_paths = discover_external_plugins()
     for plugin_path in external_paths:
         start_time = time.perf_counter()
         plugin = load_plugin(plugin_path)
         if plugin:
+            if _registry.get_plugin(plugin.agent_name) is not None:
+                logger.warning(
+                    f"Skipping external plugin '{plugin_path}': agent '{plugin.agent_name}' "
+                    f"already loaded"
+                )
+                continue
             load_time_ms = (time.perf_counter() - start_time) * 1000
             _registry.register_plugin(plugin, load_time_ms)
             logger.info(f"Registered external plugin '{plugin.agent_name}' with {len(plugin.get_tools())} tools")

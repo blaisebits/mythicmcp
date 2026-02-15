@@ -1,0 +1,1060 @@
+"""Tests for YAML-based agent plugin configuration loader.
+
+Covers:
+- T016: Missing required fields
+- T017: Invalid field values
+- T018: YAML parse errors
+- T019: Unrecognized top-level keys
+- T020: Validation error field paths
+- T020a: Duplicate agent name across files
+- T021: Minimal agent config
+- T022: Multi-command agent with mixed types
+- T023: External plugin directory discovery
+- T024: Coexistence with code-based plugins
+"""
+
+from __future__ import annotations
+
+import logging
+import os
+import textwrap
+from pathlib import Path
+from typing import Any
+
+import pytest
+
+from mythicmcp.plugins.yaml_loader import (
+    AgentConfigModel,
+    CommandConfigModel,
+    ParameterConfigModel,
+    YamlConfigError,
+    YamlConfigModel,
+    build_handler,
+    build_parameter_model,
+    discover_yaml_configs,
+    load_yaml_plugin,
+    parse_yaml_config,
+)
+
+
+def _write_yaml(tmp_path: Path, filename: str, content: str) -> Path:
+    """Helper to write a YAML file and return its path."""
+    path = tmp_path / filename
+    path.write_text(textwrap.dedent(content))
+    return path
+
+
+def _minimal_config() -> dict[str, Any]:
+    """Return a minimal valid config dict."""
+    return {
+        "agent": {
+            "name": "testagent",
+            "description": "Test agent",
+            "supported_os": ["Windows"],
+        },
+        "commands": [
+            {
+                "name": "ping",
+                "description": "Ping command",
+            }
+        ],
+    }
+
+
+# =============================================================================
+# T016: Missing required fields
+# =============================================================================
+
+
+class TestMissingRequiredFields:
+    """Test that missing required fields produce validation errors."""
+
+    def test_missing_agent_name(self, tmp_path: Path) -> None:
+        path = _write_yaml(tmp_path, "test.yaml", """
+            agent:
+              description: "Test"
+              supported_os:
+                - Windows
+            commands:
+              - name: ping
+                description: "Ping"
+        """)
+        result = parse_yaml_config(path)
+        assert isinstance(result, YamlConfigError)
+        assert any("name" in e["field"] for e in result.errors)
+
+    def test_missing_agent_description(self, tmp_path: Path) -> None:
+        path = _write_yaml(tmp_path, "test.yaml", """
+            agent:
+              name: testagent
+              supported_os:
+                - Windows
+            commands:
+              - name: ping
+                description: "Ping"
+        """)
+        result = parse_yaml_config(path)
+        assert isinstance(result, YamlConfigError)
+        assert any("description" in e["field"] for e in result.errors)
+
+    def test_missing_agent_supported_os(self, tmp_path: Path) -> None:
+        path = _write_yaml(tmp_path, "test.yaml", """
+            agent:
+              name: testagent
+              description: "Test agent"
+            commands:
+              - name: ping
+                description: "Ping"
+        """)
+        result = parse_yaml_config(path)
+        assert isinstance(result, YamlConfigError)
+        assert any("supported_os" in e["field"] for e in result.errors)
+
+    def test_missing_commands(self, tmp_path: Path) -> None:
+        path = _write_yaml(tmp_path, "test.yaml", """
+            agent:
+              name: testagent
+              description: "Test agent"
+              supported_os:
+                - Windows
+        """)
+        result = parse_yaml_config(path)
+        assert isinstance(result, YamlConfigError)
+        assert any("commands" in e["field"] for e in result.errors)
+
+    def test_command_missing_name(self, tmp_path: Path) -> None:
+        path = _write_yaml(tmp_path, "test.yaml", """
+            agent:
+              name: testagent
+              description: "Test agent"
+              supported_os:
+                - Windows
+            commands:
+              - description: "Ping command"
+        """)
+        result = parse_yaml_config(path)
+        assert isinstance(result, YamlConfigError)
+
+    def test_command_missing_description(self, tmp_path: Path) -> None:
+        path = _write_yaml(tmp_path, "test.yaml", """
+            agent:
+              name: testagent
+              description: "Test agent"
+              supported_os:
+                - Windows
+            commands:
+              - name: ping
+        """)
+        result = parse_yaml_config(path)
+        assert isinstance(result, YamlConfigError)
+
+    def test_parameter_missing_name(self, tmp_path: Path) -> None:
+        path = _write_yaml(tmp_path, "test.yaml", """
+            agent:
+              name: testagent
+              description: "Test agent"
+              supported_os:
+                - Windows
+            commands:
+              - name: ping
+                description: "Ping command"
+                parameters:
+                  - type: string
+                    description: "A parameter"
+        """)
+        result = parse_yaml_config(path)
+        assert isinstance(result, YamlConfigError)
+
+    def test_parameter_missing_type(self, tmp_path: Path) -> None:
+        path = _write_yaml(tmp_path, "test.yaml", """
+            agent:
+              name: testagent
+              description: "Test agent"
+              supported_os:
+                - Windows
+            commands:
+              - name: ping
+                description: "Ping command"
+                parameters:
+                  - name: target
+                    description: "Target host"
+        """)
+        result = parse_yaml_config(path)
+        assert isinstance(result, YamlConfigError)
+
+    def test_parameter_missing_description(self, tmp_path: Path) -> None:
+        path = _write_yaml(tmp_path, "test.yaml", """
+            agent:
+              name: testagent
+              description: "Test agent"
+              supported_os:
+                - Windows
+            commands:
+              - name: ping
+                description: "Ping command"
+                parameters:
+                  - name: target
+                    type: string
+        """)
+        result = parse_yaml_config(path)
+        assert isinstance(result, YamlConfigError)
+
+
+# =============================================================================
+# T017: Invalid field values
+# =============================================================================
+
+
+class TestInvalidFieldValues:
+    """Test that invalid field values produce validation errors."""
+
+    def test_unsupported_parameter_type(self, tmp_path: Path) -> None:
+        path = _write_yaml(tmp_path, "test.yaml", """
+            agent:
+              name: testagent
+              description: "Test agent"
+              supported_os:
+                - Windows
+            commands:
+              - name: ping
+                description: "Ping command"
+                parameters:
+                  - name: count
+                    type: float
+                    description: "Count"
+        """)
+        result = parse_yaml_config(path)
+        assert isinstance(result, YamlConfigError)
+        assert any("float" in e["message"] for e in result.errors)
+
+    def test_invalid_agent_name_uppercase(self, tmp_path: Path) -> None:
+        path = _write_yaml(tmp_path, "test.yaml", """
+            agent:
+              name: TestAgent
+              description: "Test agent"
+              supported_os:
+                - Windows
+            commands:
+              - name: ping
+                description: "Ping command"
+        """)
+        result = parse_yaml_config(path)
+        assert isinstance(result, YamlConfigError)
+
+    def test_invalid_agent_name_special_chars(self, tmp_path: Path) -> None:
+        path = _write_yaml(tmp_path, "test.yaml", """
+            agent:
+              name: test_agent!
+              description: "Test agent"
+              supported_os:
+                - Windows
+            commands:
+              - name: ping
+                description: "Ping command"
+        """)
+        result = parse_yaml_config(path)
+        assert isinstance(result, YamlConfigError)
+
+    def test_invalid_agent_name_too_long(self, tmp_path: Path) -> None:
+        long_name = "a" * 51
+        path = _write_yaml(tmp_path, "test.yaml", f"""
+            agent:
+              name: {long_name}
+              description: "Test agent"
+              supported_os:
+                - Windows
+            commands:
+              - name: ping
+                description: "Ping command"
+        """)
+        result = parse_yaml_config(path)
+        assert isinstance(result, YamlConfigError)
+
+    def test_invalid_supported_os(self, tmp_path: Path) -> None:
+        path = _write_yaml(tmp_path, "test.yaml", """
+            agent:
+              name: testagent
+              description: "Test agent"
+              supported_os:
+                - FreeBSD
+            commands:
+              - name: ping
+                description: "Ping command"
+        """)
+        result = parse_yaml_config(path)
+        assert isinstance(result, YamlConfigError)
+        assert any("FreeBSD" in e["message"] for e in result.errors)
+
+    def test_timeout_too_low(self, tmp_path: Path) -> None:
+        path = _write_yaml(tmp_path, "test.yaml", """
+            agent:
+              name: testagent
+              description: "Test agent"
+              supported_os:
+                - Windows
+            commands:
+              - name: ping
+                description: "Ping command"
+                timeout: 10
+        """)
+        result = parse_yaml_config(path)
+        assert isinstance(result, YamlConfigError)
+
+    def test_timeout_too_high(self, tmp_path: Path) -> None:
+        path = _write_yaml(tmp_path, "test.yaml", """
+            agent:
+              name: testagent
+              description: "Test agent"
+              supported_os:
+                - Windows
+            commands:
+              - name: ping
+                description: "Ping command"
+                timeout: 500
+        """)
+        result = parse_yaml_config(path)
+        assert isinstance(result, YamlConfigError)
+
+    def test_duplicate_command_names(self, tmp_path: Path) -> None:
+        path = _write_yaml(tmp_path, "test.yaml", """
+            agent:
+              name: testagent
+              description: "Test agent"
+              supported_os:
+                - Windows
+            commands:
+              - name: ping
+                description: "First ping"
+              - name: ping
+                description: "Second ping"
+        """)
+        result = parse_yaml_config(path)
+        assert isinstance(result, YamlConfigError)
+        assert any("Duplicate" in e["message"] or "duplicate" in e["message"].lower() for e in result.errors)
+
+    def test_reserved_param_name_callback_id(self, tmp_path: Path) -> None:
+        path = _write_yaml(tmp_path, "test.yaml", """
+            agent:
+              name: testagent
+              description: "Test agent"
+              supported_os:
+                - Windows
+            commands:
+              - name: ping
+                description: "Ping command"
+                parameters:
+                  - name: callback_id
+                    type: integer
+                    description: "Callback"
+        """)
+        result = parse_yaml_config(path)
+        assert isinstance(result, YamlConfigError)
+        assert any("reserved" in e["message"].lower() for e in result.errors)
+
+    def test_reserved_param_name_timeout(self, tmp_path: Path) -> None:
+        path = _write_yaml(tmp_path, "test.yaml", """
+            agent:
+              name: testagent
+              description: "Test agent"
+              supported_os:
+                - Windows
+            commands:
+              - name: ping
+                description: "Ping command"
+                parameters:
+                  - name: timeout
+                    type: integer
+                    description: "Timeout"
+        """)
+        result = parse_yaml_config(path)
+        assert isinstance(result, YamlConfigError)
+        assert any("reserved" in e["message"].lower() for e in result.errors)
+
+    def test_reserved_param_name_ctx(self, tmp_path: Path) -> None:
+        path = _write_yaml(tmp_path, "test.yaml", """
+            agent:
+              name: testagent
+              description: "Test agent"
+              supported_os:
+                - Windows
+            commands:
+              - name: ping
+                description: "Ping command"
+                parameters:
+                  - name: ctx
+                    type: string
+                    description: "Context"
+        """)
+        result = parse_yaml_config(path)
+        assert isinstance(result, YamlConfigError)
+        assert any("reserved" in e["message"].lower() for e in result.errors)
+
+    def test_reserved_param_name_context(self, tmp_path: Path) -> None:
+        path = _write_yaml(tmp_path, "test.yaml", """
+            agent:
+              name: testagent
+              description: "Test agent"
+              supported_os:
+                - Windows
+            commands:
+              - name: ping
+                description: "Ping command"
+                parameters:
+                  - name: context
+                    type: string
+                    description: "Context"
+        """)
+        result = parse_yaml_config(path)
+        assert isinstance(result, YamlConfigError)
+
+    def test_reserved_param_name_self(self, tmp_path: Path) -> None:
+        path = _write_yaml(tmp_path, "test.yaml", """
+            agent:
+              name: testagent
+              description: "Test agent"
+              supported_os:
+                - Windows
+            commands:
+              - name: ping
+                description: "Ping command"
+                parameters:
+                  - name: self
+                    type: string
+                    description: "Self"
+        """)
+        result = parse_yaml_config(path)
+        assert isinstance(result, YamlConfigError)
+
+    def test_min_greater_than_max(self, tmp_path: Path) -> None:
+        path = _write_yaml(tmp_path, "test.yaml", """
+            agent:
+              name: testagent
+              description: "Test agent"
+              supported_os:
+                - Windows
+            commands:
+              - name: ping
+                description: "Ping command"
+                parameters:
+                  - name: count
+                    type: integer
+                    description: "Count"
+                    min: 10
+                    max: 5
+        """)
+        result = parse_yaml_config(path)
+        assert isinstance(result, YamlConfigError)
+
+    def test_default_type_mismatch(self, tmp_path: Path) -> None:
+        path = _write_yaml(tmp_path, "test.yaml", """
+            agent:
+              name: testagent
+              description: "Test agent"
+              supported_os:
+                - Windows
+            commands:
+              - name: ping
+                description: "Ping command"
+                parameters:
+                  - name: count
+                    type: integer
+                    description: "Count"
+                    default: "not a number"
+        """)
+        result = parse_yaml_config(path)
+        assert isinstance(result, YamlConfigError)
+
+    def test_choices_on_integer_param(self, tmp_path: Path) -> None:
+        path = _write_yaml(tmp_path, "test.yaml", """
+            agent:
+              name: testagent
+              description: "Test agent"
+              supported_os:
+                - Windows
+            commands:
+              - name: ping
+                description: "Ping command"
+                parameters:
+                  - name: count
+                    type: integer
+                    description: "Count"
+                    choices:
+                      - "1"
+                      - "2"
+        """)
+        result = parse_yaml_config(path)
+        assert isinstance(result, YamlConfigError)
+        assert any("choices" in e["message"].lower() for e in result.errors)
+
+    def test_min_max_on_string_param(self, tmp_path: Path) -> None:
+        path = _write_yaml(tmp_path, "test.yaml", """
+            agent:
+              name: testagent
+              description: "Test agent"
+              supported_os:
+                - Windows
+            commands:
+              - name: ping
+                description: "Ping command"
+                parameters:
+                  - name: target
+                    type: string
+                    description: "Target"
+                    min: 1
+                    max: 100
+        """)
+        result = parse_yaml_config(path)
+        assert isinstance(result, YamlConfigError)
+        assert any("min" in e["message"].lower() for e in result.errors)
+
+    def test_empty_commands_list(self, tmp_path: Path) -> None:
+        path = _write_yaml(tmp_path, "test.yaml", """
+            agent:
+              name: testagent
+              description: "Test agent"
+              supported_os:
+                - Windows
+            commands: []
+        """)
+        result = parse_yaml_config(path)
+        assert isinstance(result, YamlConfigError)
+
+
+# =============================================================================
+# T018: YAML parse errors
+# =============================================================================
+
+
+class TestYamlParseErrors:
+    """Test that YAML parse errors are handled gracefully."""
+
+    def test_malformed_yaml(self, tmp_path: Path) -> None:
+        path = _write_yaml(tmp_path, "test.yaml", """
+            agent:
+              name: testagent
+              description: "Test agent
+              supported_os:
+                - Windows
+        """)
+        result = parse_yaml_config(path)
+        assert isinstance(result, YamlConfigError)
+        assert result.agent_name == "unknown"
+        assert any("YAML" in e["message"] or "yaml" in e["message"] for e in result.errors)
+
+    def test_empty_file(self, tmp_path: Path) -> None:
+        path = tmp_path / "test.yaml"
+        path.write_text("")
+        result = parse_yaml_config(path)
+        assert isinstance(result, YamlConfigError)
+        assert any("empty" in e["message"].lower() for e in result.errors)
+
+    def test_file_with_only_comments(self, tmp_path: Path) -> None:
+        path = _write_yaml(tmp_path, "test.yaml", """
+            # This is just a comment
+            # No actual content
+        """)
+        result = parse_yaml_config(path)
+        assert isinstance(result, YamlConfigError)
+        assert any("empty" in e["message"].lower() or "comment" in e["message"].lower() for e in result.errors)
+
+    def test_non_dict_top_level(self, tmp_path: Path) -> None:
+        path = _write_yaml(tmp_path, "test.yaml", """
+            - item1
+            - item2
+        """)
+        result = parse_yaml_config(path)
+        assert isinstance(result, YamlConfigError)
+        assert any("mapping" in e["message"].lower() for e in result.errors)
+
+
+# =============================================================================
+# T019: Unrecognized top-level keys
+# =============================================================================
+
+
+class TestUnrecognizedKeys:
+    """Test that unrecognized top-level keys produce warnings but still load."""
+
+    def test_unrecognized_keys_warning(self, tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+        path = _write_yaml(tmp_path, "test.yaml", """
+            agent:
+              name: testagent
+              description: "Test agent"
+              supported_os:
+                - Windows
+            commands:
+              - name: ping
+                description: "Ping command"
+            metadata:
+              version: "1.0"
+        """)
+        with caplog.at_level(logging.WARNING):
+            result = parse_yaml_config(path)
+        assert isinstance(result, YamlConfigModel)
+        assert result.agent.name == "testagent"
+        assert "metadata" in caplog.text
+
+
+# =============================================================================
+# T020: Validation error field paths
+# =============================================================================
+
+
+class TestValidationErrorFieldPaths:
+    """Test that validation errors include file path and specific field paths."""
+
+    def test_error_includes_file_path(self, tmp_path: Path) -> None:
+        path = _write_yaml(tmp_path, "test.yaml", """
+            agent:
+              description: "Test"
+              supported_os:
+                - Windows
+            commands:
+              - name: ping
+                description: "Ping"
+        """)
+        result = parse_yaml_config(path)
+        assert isinstance(result, YamlConfigError)
+        assert str(path) in result.file_path
+
+    def test_error_includes_agent_name_when_parseable(self, tmp_path: Path) -> None:
+        path = _write_yaml(tmp_path, "test.yaml", """
+            agent:
+              name: testagent
+              supported_os:
+                - Windows
+            commands:
+              - name: ping
+                description: "Ping"
+        """)
+        result = parse_yaml_config(path)
+        assert isinstance(result, YamlConfigError)
+        assert result.agent_name == "testagent"
+
+    def test_error_shows_unknown_agent_when_unparseable(self, tmp_path: Path) -> None:
+        path = tmp_path / "test.yaml"
+        path.write_text("")
+        result = parse_yaml_config(path)
+        assert isinstance(result, YamlConfigError)
+        assert result.agent_name == "unknown"
+
+    def test_error_str_includes_details(self, tmp_path: Path) -> None:
+        path = _write_yaml(tmp_path, "test.yaml", """
+            agent:
+              name: testagent
+              description: "Test"
+              supported_os:
+                - FreeBSD
+            commands:
+              - name: ping
+                description: "Ping"
+        """)
+        result = parse_yaml_config(path)
+        assert isinstance(result, YamlConfigError)
+        error_str = str(result)
+        assert "testagent" in error_str or str(path) in error_str
+
+
+# =============================================================================
+# T020a: Duplicate agent name across files
+# =============================================================================
+
+
+class TestDuplicateAgentNameAcrossFiles:
+    """Test that two YAML configs defining the same agent name both fail to load."""
+
+    def test_duplicate_agent_name_second_rejected(self, tmp_path: Path) -> None:
+        _write_yaml(tmp_path, "agent1.yaml", """
+            agent:
+              name: myagent
+              description: "First agent"
+              supported_os:
+                - Windows
+            commands:
+              - name: cmd1
+                description: "Command 1"
+        """)
+        _write_yaml(tmp_path, "agent2.yaml", """
+            agent:
+              name: myagent
+              description: "Second agent"
+              supported_os:
+                - Linux
+            commands:
+              - name: cmd2
+                description: "Command 2"
+        """)
+        from mythicmcp.plugins.registry import PluginRegistry
+
+        registry = PluginRegistry()
+        yaml_paths = discover_yaml_configs(tmp_path)
+        assert len(yaml_paths) == 2
+
+        loaded = []
+        for yaml_path in yaml_paths:
+            result = load_yaml_plugin(yaml_path)
+            if not isinstance(result, YamlConfigError):
+                success = registry.register_plugin(result)
+                loaded.append((yaml_path.name, success))
+
+        # First should succeed, second should fail (duplicate)
+        assert loaded[0][1] is True
+        assert loaded[1][1] is False
+
+
+# =============================================================================
+# T021: Minimal agent config
+# =============================================================================
+
+
+class TestMinimalAgentConfig:
+    """Test that a minimal agent config produces a valid plugin."""
+
+    def test_minimal_config_produces_valid_plugin(self, tmp_path: Path) -> None:
+        path = _write_yaml(tmp_path, "minimal.yaml", """
+            agent:
+              name: minimal
+              description: "Minimal test agent"
+              supported_os:
+                - Linux
+            commands:
+              - name: ping
+                description: "Ping command"
+                parameters:
+                  - name: target
+                    type: string
+                    description: "Target host"
+                    required: true
+        """)
+        result = load_yaml_plugin(path)
+        assert not isinstance(result, YamlConfigError)
+
+        assert result.agent_name == "minimal"
+        assert result.agent_description == "Minimal test agent"
+        assert result.supported_os == ["Linux"]
+
+        tools = result.get_tools()
+        assert len(tools) == 1
+        assert tools[0].name == "ping"
+        assert tools[0].description == "Ping command"
+
+        # Verify parameter model
+        fields = tools[0].parameters.model_fields
+        assert "callback_id" in fields
+        assert "target" in fields
+        assert "timeout" in fields
+        assert fields["callback_id"].annotation is int
+        assert fields["target"].annotation is str
+        assert fields["timeout"].default == 60
+
+
+# =============================================================================
+# T022: Multi-command agent with mixed types
+# =============================================================================
+
+
+class TestMultiCommandAgent:
+    """Test a multi-command agent with mixed parameter types."""
+
+    def test_three_commands_mixed_types(self, tmp_path: Path) -> None:
+        path = _write_yaml(tmp_path, "multi.yaml", """
+            agent:
+              name: multi
+              description: "Multi-command agent"
+              supported_os:
+                - Windows
+                - Linux
+            commands:
+              - name: search
+                description: "Search for files"
+                timeout: 90
+                parameters:
+                  - name: query
+                    type: string
+                    description: "Search query"
+                    required: true
+                  - name: max_results
+                    type: integer
+                    description: "Max results to return"
+                    default: 10
+                    min: 1
+                    max: 100
+
+              - name: delete
+                description: "Delete a file"
+                timeout: 60
+                parameters:
+                  - name: path
+                    type: string
+                    description: "File path"
+                    required: true
+                  - name: force
+                    type: boolean
+                    description: "Force delete"
+                    default: false
+
+              - name: status
+                description: "Get agent status"
+                timeout: 30
+        """)
+        result = load_yaml_plugin(path)
+        assert not isinstance(result, YamlConfigError)
+
+        tools = result.get_tools()
+        assert len(tools) == 3
+
+        # Verify search command
+        search = next(t for t in tools if t.name == "search")
+        search_fields = search.parameters.model_fields
+        assert list(search_fields.keys()) == ["callback_id", "query", "max_results", "timeout"]
+        assert search_fields["max_results"].default == 10
+        assert search_fields["timeout"].default == 90
+
+        # Verify delete command
+        delete = next(t for t in tools if t.name == "delete")
+        delete_fields = delete.parameters.model_fields
+        assert list(delete_fields.keys()) == ["callback_id", "path", "force", "timeout"]
+        assert delete_fields["force"].annotation is bool
+        assert delete_fields["force"].default is False
+
+        # Verify status command (no params)
+        status = next(t for t in tools if t.name == "status")
+        status_fields = status.parameters.model_fields
+        assert list(status_fields.keys()) == ["callback_id", "timeout"]
+        assert status_fields["timeout"].default == 30
+
+
+# =============================================================================
+# T023: External plugin directory discovery
+# =============================================================================
+
+
+class TestExternalPluginDirectory:
+    """Test YAML discovery from external plugins directory."""
+
+    def test_discover_yaml_from_external_dir(self, tmp_path: Path) -> None:
+        _write_yaml(tmp_path, "custom.yaml", """
+            agent:
+              name: custom
+              description: "Custom external agent"
+              supported_os:
+                - Linux
+            commands:
+              - name: exec
+                description: "Execute command"
+        """)
+
+        configs = discover_yaml_configs(tmp_path)
+        assert len(configs) == 1
+        assert configs[0].name == "custom.yaml"
+
+    def test_discover_skips_dotfiles(self, tmp_path: Path) -> None:
+        _write_yaml(tmp_path, ".hidden.yaml", """
+            agent:
+              name: hidden
+              description: "Hidden agent"
+              supported_os: [Windows]
+            commands:
+              - name: cmd
+                description: "Command"
+        """)
+        configs = discover_yaml_configs(tmp_path)
+        assert len(configs) == 0
+
+    def test_discover_skips_underscore_files(self, tmp_path: Path) -> None:
+        _write_yaml(tmp_path, "_template.yaml", """
+            agent:
+              name: template
+              description: "Template agent"
+              supported_os: [Windows]
+            commands:
+              - name: cmd
+                description: "Command"
+        """)
+        configs = discover_yaml_configs(tmp_path)
+        assert len(configs) == 0
+
+    def test_discover_yml_extension(self, tmp_path: Path) -> None:
+        _write_yaml(tmp_path, "agent.yml", """
+            agent:
+              name: ymlagent
+              description: "YML agent"
+              supported_os: [Linux]
+            commands:
+              - name: cmd
+                description: "Command"
+        """)
+        configs = discover_yaml_configs(tmp_path)
+        assert len(configs) == 1
+
+    def test_discover_nonexistent_directory(self, tmp_path: Path) -> None:
+        nonexistent = tmp_path / "nonexistent"
+        configs = discover_yaml_configs(nonexistent)
+        assert configs == []
+
+    def test_external_dir_via_env_var(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        _write_yaml(tmp_path, "external.yaml", """
+            agent:
+              name: external
+              description: "External agent"
+              supported_os:
+                - macOS
+            commands:
+              - name: hello
+                description: "Hello command"
+        """)
+        monkeypatch.setenv("MYTHICMCP_PLUGINS_DIR", str(tmp_path))
+
+        from mythicmcp.plugins import _registry, load_all_plugins
+
+        _registry.clear()
+        registry = load_all_plugins()
+
+        assert "external" in registry.list_plugins()
+        _registry.clear()
+
+
+# =============================================================================
+# T024: Coexistence with code-based plugins
+# =============================================================================
+
+
+class TestPluginCoexistence:
+    """Test that YAML and code-based plugins coexist."""
+
+    def test_yaml_and_code_plugins_coexist(self) -> None:
+        from mythicmcp.plugins import _registry, load_all_plugins
+
+        _registry.clear()
+        registry = load_all_plugins()
+
+        plugins = registry.list_plugins()
+        assert "apollo" in plugins  # from YAML
+        assert "arachne" in plugins  # from Python
+
+        # Verify tool counts
+        all_tools = registry.get_all_tools()
+        apollo_tools = [n for n in all_tools if n.startswith("apollo_")]
+        arachne_tools = [n for n in all_tools if n.startswith("arachne_")]
+        assert len(apollo_tools) == 10
+        assert len(arachne_tools) == 8
+
+        _registry.clear()
+
+
+# =============================================================================
+# Additional model-level tests
+# =============================================================================
+
+
+class TestParameterModelBuilder:
+    """Test dynamic Pydantic model building."""
+
+    def test_required_param_model(self) -> None:
+        cmd = CommandConfigModel(
+            name="test",
+            description="Test command",
+            parameters=[
+                ParameterConfigModel(
+                    name="target",
+                    type="string",
+                    description="Target host",
+                    required=True,
+                )
+            ],
+        )
+        model = build_parameter_model(cmd, "agent")
+        fields = model.model_fields
+
+        assert fields["callback_id"].is_required()
+        assert fields["target"].is_required()
+        assert not fields["timeout"].is_required()
+        assert fields["timeout"].default == 60
+
+    def test_optional_param_with_default(self) -> None:
+        cmd = CommandConfigModel(
+            name="test",
+            description="Test command",
+            timeout=90,
+            parameters=[
+                ParameterConfigModel(
+                    name="count",
+                    type="integer",
+                    description="Count",
+                    default=5,
+                    min=1,
+                    max=100,
+                )
+            ],
+        )
+        model = build_parameter_model(cmd, "agent")
+        fields = model.model_fields
+
+        assert fields["count"].default == 5
+        assert not fields["count"].is_required()
+        assert fields["timeout"].default == 90
+
+    def test_boolean_param(self) -> None:
+        cmd = CommandConfigModel(
+            name="test",
+            description="Test command",
+            parameters=[
+                ParameterConfigModel(
+                    name="verbose",
+                    type="boolean",
+                    description="Verbose output",
+                    default=False,
+                )
+            ],
+        )
+        model = build_parameter_model(cmd, "agent")
+        assert model.model_fields["verbose"].annotation is bool
+        assert model.model_fields["verbose"].default is False
+
+
+class TestHandlerBuilder:
+    """Test handler function generation."""
+
+    def test_handler_is_async_callable(self) -> None:
+        agent = AgentConfigModel(
+            name="test",
+            description="Test",
+            supported_os=["Windows"],
+        )
+        cmd = CommandConfigModel(
+            name="shell",
+            description="Shell command",
+            parameters=[
+                ParameterConfigModel(
+                    name="command",
+                    type="string",
+                    description="Command to run",
+                    required=True,
+                )
+            ],
+        )
+        handler = build_handler(agent, cmd)
+        import asyncio
+
+        assert asyncio.iscoroutinefunction(handler)
+
+
+class TestApolloYamlConfig:
+    """Verify the builtin Apollo YAML config loads correctly."""
+
+    def test_apollo_yaml_loads(self) -> None:
+        path = Path(__file__).parent.parent.parent / "src" / "mythicmcp" / "plugins" / "builtin" / "apollo.yaml"
+        result = load_yaml_plugin(path)
+        assert not isinstance(result, YamlConfigError)
+        assert result.agent_name == "apollo"
+        assert len(result.get_tools()) == 10
+
+    def test_apollo_tool_names(self) -> None:
+        path = Path(__file__).parent.parent.parent / "src" / "mythicmcp" / "plugins" / "builtin" / "apollo.yaml"
+        result = load_yaml_plugin(path)
+        assert not isinstance(result, YamlConfigError)
+        tool_names = sorted(t.name for t in result.get_tools())
+        assert tool_names == sorted([
+            "shell", "pwd", "ls", "cd", "cat", "ps",
+            "run", "download", "execute_assembly", "screenshot",
+        ])

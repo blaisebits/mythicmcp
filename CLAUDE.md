@@ -1,6 +1,7 @@
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Reponses should be concise, sacrafice grammar for the sace of consicsion.
 
 ## Project Overview
 
@@ -62,6 +63,8 @@ Features are developed on branches named `feature/<name>`. Artifacts are stored 
 - N/A (stateless - files stored on Mythic server) (004-core-file-tools)
 - Python 3.10+ + pytest, pytest-asyncio, pyyaml, pydantic, mythic (0.2.10+) (005-integration-testing)
 - N/A (stateless — tests interact with Mythic server and target systems) (005-integration-testing)
+- Python 3.10+ + mcp>=1.26.0, mythic>=0.2.10, pydantic>=2.0.0, pyyaml>=6.0.0 (006-yaml-plugin-config)
+- N/A (stateless — config files read at startup) (006-yaml-plugin-config)
 
 ## Installation
 
@@ -91,11 +94,48 @@ except ExceptionGroup as eg:
 
 ## Plugin System
 
-The plugin system allows agent-specific tools to be loaded dynamically. Plugins are located in:
-- `src/mythicmcp/plugins/builtin/` - Bundled plugins (Apollo, Arachne)
+The plugin system allows agent-specific tools to be loaded dynamically. Plugins can be defined via YAML configuration files (preferred) or Python code (for advanced use cases). Plugins are located in:
+- `src/mythicmcp/plugins/builtin/` - Bundled plugins (Apollo via YAML, Arachne via Python)
 - External directory via `MYTHICMCP_PLUGINS_DIR` environment variable
 
-### Creating a Plugin
+YAML configs are loaded first, then Python modules. If both define the same agent name, the YAML version takes precedence.
+
+### Creating a Plugin via YAML (Preferred)
+
+Place a `.yaml` file in the plugins directory:
+
+```yaml
+# src/mythicmcp/plugins/builtin/myagent.yaml
+agent:
+  name: myagent
+  description: "My custom agent"
+  supported_os:
+    - Windows
+    - Linux
+
+commands:
+  - name: shell
+    description: "Execute a shell command on a myagent callback"
+    mythic_command: shell
+    timeout: 60
+    parameters:
+      - name: command
+        type: string
+        description: "Shell command to execute"
+        required: true
+
+  - name: status
+    description: "Get agent status on a myagent callback"
+    timeout: 30
+```
+
+Supported parameter types: `string`, `integer`, `boolean`. Parameters support `required`, `default`, `min`/`max` (integers), and `choices` (strings). The `callback_id` and `timeout` parameters are implicit.
+
+The YAML loader (`src/mythicmcp/plugins/yaml_loader.py`) validates configs at startup using Pydantic models and auto-generates tool handlers that call `execute_with_validation()`.
+
+### Creating a Plugin via Python (Advanced)
+
+For commands requiring custom handler logic:
 
 ```python
 from mythicmcp.plugins.base import AgentPlugin, ToolDefinition
@@ -130,8 +170,8 @@ class MyAgentPlugin(AgentPlugin):
 
 ### Available Plugins
 
-- **Apollo** (10 tools): shell, pwd, ls, cd, cat, ps, run, download, execute_assembly, screenshot
-- **Arachne** (8 tools): shell, pwd, ls, cd, rm, download, upload, execute_assembly
+- **Apollo** (10 tools, YAML-defined): shell, pwd, ls, cd, cat, ps, run, download, execute_assembly, screenshot
+- **Arachne** (8 tools, Python-defined): shell, pwd, ls, cd, rm, download, upload, execute_assembly
 
 ## Core Tools
 
@@ -157,6 +197,6 @@ The MCP server exposes these core tools for Mythic operations:
 - `core_list_uploaded_files` - List files uploaded to Mythic
 
 ## Recent Changes
+- 006-yaml-plugin-config: YAML-driven plugin config system. apollo.yaml replaces apollo.py, new yaml_loader.py module, pyyaml added to main dependencies. Plugins can now be defined via YAML without writing Python code.
 - 005-integration-testing: Added Python 3.10+ + pytest, pytest-asyncio, pyyaml, pydantic, mythic (0.2.10+)
 - 004-core-file-tools: Added 4 file management tools (upload, download, list downloaded/uploaded), base64 content encoding, file metadata via GraphQL
-- 003-agent-plugin-system: Added plugin system with Apollo (10 tools) and Arachne (8 tools) plugins, dynamic tool loading, agent type validation

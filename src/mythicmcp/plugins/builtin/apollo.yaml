@@ -1,0 +1,99 @@
+agent:
+  name: apollo
+  description: "Apollo Windows C# agent"
+  supported_os:
+    - Windows
+
+commands:
+  - name: shell
+    description: "Execute a shell command via cmd.exe on an Apollo callback"
+    mythic_command: shell
+    timeout: 60
+    parameters:
+      - name: command
+        type: string
+        description: "Shell command to execute via cmd.exe"
+        required: true
+
+  - name: pwd
+    description: "Get current working directory of an Apollo callback"
+    mythic_command: pwd
+    timeout: 60
+
+  - name: ls
+    description: "List directory contents on an Apollo callback"
+    mythic_command: ls
+    timeout: 60
+    parameters:
+      - name: path
+        type: string
+        description: "Path to list (default: current directory)"
+        default: "."
+
+  - name: cd
+    description: "Change working directory on an Apollo callback"
+    mythic_command: cd
+    timeout: 60
+    parameters:
+      - name: path
+        type: string
+        description: "Path to change to"
+        required: true
+
+  - name: cat
+    description: "Read file contents on an Apollo callback"
+    mythic_command: cat
+    timeout: 60
+    parameters:
+      - name: path
+        type: string
+        description: "Path to file to read"
+        required: true
+
+  - name: ps
+    description: "List running processes on an Apollo callback"
+    mythic_command: ps
+    timeout: 60
+
+  - name: run
+    description: "Execute a program without cmd.exe wrapper on an Apollo callback"
+    mythic_command: run
+    timeout: 60
+    parameters:
+      - name: executable
+        type: string
+        description: "Path to executable"
+        required: true
+      - name: arguments
+        type: string
+        description: "Arguments to pass to executable"
+        default: ""
+
+  - name: download
+    description: "Download a file from an Apollo callback"
+    mythic_command: download
+    timeout: 120
+    parameters:
+      - name: path
+        type: string
+        description: "Path to file to download"
+        required: true
+
+  - name: execute_assembly
+    description: "Execute a .NET assembly on an Apollo callback"
+    mythic_command: execute_assembly
+    timeout: 120
+    parameters:
+      - name: assembly_name
+        type: string
+        description: "Name of registered .NET assembly (e.g., 'Seatbelt.exe')"
+        required: true
+      - name: assembly_arguments
+        type: string
+        description: "Arguments to pass to assembly"
+        default: ""
+
+  - name: screenshot
+    description: "Take a screenshot on an Apollo callback"
+    mythic_command: screenshot
+    timeout: 120
