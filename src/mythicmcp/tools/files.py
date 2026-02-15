@@ -237,6 +237,9 @@ async def download_file(
     # First, get metadata to retrieve filename and hashes
     metadata = await _get_file_metadata(mythic_instance, file_uuid)
 
+    if metadata is None:
+        raise FileNotFoundError(file_uuid)
+
     try:
         # Download file content
         content_bytes = await mythic.download_file(
