@@ -8,6 +8,7 @@ from tests.integration.config_models import IntegrationTestConfig
 from tests.integration.helpers.callback import get_baseline_callback_ids
 from tests.integration.helpers.deployment import (
     kill_existing_payload_process,
+    delete_existing_payload_file,
     upload_payload_to_target,
     execute_payload_on_target,
 )
@@ -44,6 +45,11 @@ class TestPayloadDeployment:
                 try:
                     # Kill any leftover process from a prior run to avoid file locks
                     await kill_existing_payload_process(
+                        mythic_instance, target
+                    )
+
+                    # Delete stale payload file from disk before uploading new one
+                    await delete_existing_payload_file(
                         mythic_instance, target
                     )
 
