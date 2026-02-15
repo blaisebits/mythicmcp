@@ -193,6 +193,16 @@ uv run pytest
 uv run pytest --cov
 ```
 
+### Local MCP Testing
+
+To test the MCP server locally with Claude Code or other MCP clients, copy the example config and fill in your credentials:
+
+```bash
+cp .mcp.json.example .mcp.json
+```
+
+Edit `.mcp.json` with your Mythic server URL and API token. This file is gitignored and will not be committed.
+
 ## License
 
 MIT License - see LICENSE file for details.
