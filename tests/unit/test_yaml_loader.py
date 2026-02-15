@@ -919,10 +919,10 @@ class TestExternalPluginDirectory:
 # =============================================================================
 
 
-class TestPluginCoexistence:
-    """Test that YAML and code-based plugins coexist."""
+class TestBuiltinPlugins:
+    """Test that all builtin YAML plugins load correctly."""
 
-    def test_yaml_and_code_plugins_coexist(self) -> None:
+    def test_builtin_yaml_plugins_load(self) -> None:
         from mythicmcp.plugins import _registry, load_all_plugins
 
         _registry.clear()
@@ -930,7 +930,7 @@ class TestPluginCoexistence:
 
         plugins = registry.list_plugins()
         assert "apollo" in plugins  # from YAML
-        assert "arachne" in plugins  # from Python
+        assert "arachne" in plugins  # from YAML
 
         # Verify tool counts
         all_tools = registry.get_all_tools()
