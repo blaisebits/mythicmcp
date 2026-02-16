@@ -5,6 +5,9 @@ agent:
     - Windows
     - Linux
 
+metadata:
+  agent_version: "1.0.0"
+
 commands:
   - name: shell
     description: "Execute a shell command on an Arachne webshell callback"

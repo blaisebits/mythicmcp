@@ -585,14 +585,14 @@ class TestUnrecognizedKeys:
             commands:
               - name: ping
                 description: "Ping command"
-            metadata:
+            some_unknown_key:
               version: "1.0"
         """)
         with caplog.at_level(logging.WARNING):
             result = parse_yaml_config(path)
         assert isinstance(result, YamlConfigModel)
         assert result.agent.name == "testagent"
-        assert "metadata" in caplog.text
+        assert "some_unknown_key" in caplog.text
 
 
 # =============================================================================
@@ -936,7 +936,7 @@ class TestBuiltinPlugins:
         all_tools = registry.get_all_tools()
         apollo_tools = [n for n in all_tools if n.startswith("apollo_")]
         arachne_tools = [n for n in all_tools if n.startswith("arachne_")]
-        assert len(apollo_tools) == 10
+        assert len(apollo_tools) == 78
         assert len(arachne_tools) == 8
 
         _registry.clear()
@@ -1047,7 +1047,7 @@ class TestApolloYamlConfig:
         result = load_yaml_plugin(path)
         assert not isinstance(result, YamlConfigError)
         assert result.agent_name == "apollo"
-        assert len(result.get_tools()) == 10
+        assert len(result.get_tools()) == 78
 
     def test_apollo_tool_names(self) -> None:
         path = Path(__file__).parent.parent.parent / "src" / "mythicmcp" / "plugins" / "builtin" / "apollo.yaml"
@@ -1055,6 +1055,87 @@ class TestApolloYamlConfig:
         assert not isinstance(result, YamlConfigError)
         tool_names = sorted(t.name for t in result.get_tools())
         assert tool_names == sorted([
-            "shell", "pwd", "ls", "cd", "cat", "ps",
-            "run", "download", "execute_assembly", "screenshot",
+            "assembly_inject", "blockdlls", "cat", "cd", "cp", "dcsync",
+            "download", "execute_assembly", "execute_coff", "execute_pe",
+            "exit", "get_injection_techniques", "getprivs", "getsystem",
+            "ifconfig", "inject", "inline_assembly", "jobkill", "jobs",
+            "jump_psexec", "jump_wmi", "keylog_inject", "kill", "ldap_query",
+            "link", "listpipes", "load", "ls", "make_token", "mimikatz",
+            "mkdir", "mv", "net_dclist", "net_localgroup",
+            "net_localgroup_member", "net_shares", "netstat", "powerpick",
+            "powershell", "powershell_import", "ppid", "printspoofer", "ps",
+            "psinject", "pth", "pwd", "reg_query", "reg_write_value",
+            "register_assembly", "register_coff", "register_file", "rev2self",
+            "rm", "rpfwd", "run", "sc", "screenshot", "screenshot_inject",
+            "set_injection_technique", "shell", "shinject", "sleep", "socks",
+            "spawn", "spawnto_x64", "spawnto_x86", "steal_token",
+            "ticket_cache_add", "ticket_cache_extract", "ticket_cache_list",
+            "ticket_cache_purge", "ticket_store_add", "ticket_store_list",
+            "ticket_store_purge", "unlink", "upload", "whoami", "wmiexecute",
         ])
+
+
+# =============================================================================
+# Metadata field tests (T004, T005)
+# =============================================================================
+
+
+class TestMetadataField:
+    """Test metadata field parsing on YamlConfigModel."""
+
+    def test_metadata_field_parsed_without_warnings(self, tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+        """T004: YAML with metadata section loads without warnings."""
+        path = _write_yaml(tmp_path, "test.yaml", """
+            agent:
+              name: testagent
+              description: "Test agent"
+              supported_os:
+                - Windows
+            commands:
+              - name: ping
+                description: "Ping command"
+            metadata:
+              agent_version: "1.0.0"
+              mythic_version: "3.4.6+"
+        """)
+        with caplog.at_level(logging.WARNING):
+            result = parse_yaml_config(path)
+        assert isinstance(result, YamlConfigModel)
+        assert result.metadata == {"agent_version": "1.0.0", "mythic_version": "3.4.6+"}
+        assert "metadata" not in caplog.text
+        assert "Unrecognized" not in caplog.text
+
+    def test_metadata_field_absent_loads(self, tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+        """T005: YAML without metadata still loads (backward compat)."""
+        path = _write_yaml(tmp_path, "test.yaml", """
+            agent:
+              name: testagent
+              description: "Test agent"
+              supported_os:
+                - Windows
+            commands:
+              - name: ping
+                description: "Ping command"
+        """)
+        with caplog.at_level(logging.WARNING):
+            result = parse_yaml_config(path)
+        assert isinstance(result, YamlConfigModel)
+        assert result.metadata is None
+        assert "Unrecognized" not in caplog.text
+
+    def test_apollo_yaml_metadata_accessible(self) -> None:
+        """T028: Verify metadata dict is accessible on loaded apollo.yaml."""
+        path = Path(__file__).parent.parent.parent / "src" / "mythicmcp" / "plugins" / "builtin" / "apollo.yaml"
+        result = parse_yaml_config(path)
+        assert isinstance(result, YamlConfigModel)
+        assert result.metadata is not None
+        assert "agent_version" in result.metadata
+        assert result.metadata["agent_version"] == "2.4.8"
+
+    def test_arachne_yaml_metadata_accessible(self) -> None:
+        """T029: Verify metadata dict is accessible on loaded arachne.yaml."""
+        path = Path(__file__).parent.parent.parent / "src" / "mythicmcp" / "plugins" / "builtin" / "arachne.yaml"
+        result = parse_yaml_config(path)
+        assert isinstance(result, YamlConfigModel)
+        assert result.metadata is not None
+        assert "agent_version" in result.metadata
