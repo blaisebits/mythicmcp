@@ -51,6 +51,53 @@ async def cleanup_payload_on_target(
         return False
 
 
+async def cleanup_test_directory(
+    mythic_instance,
+    callback_display_id: int,
+    path: str,
+    *,
+    os_type: str = "Windows",
+) -> bool:
+    """Remove a test directory tree from the target system.
+
+    Best-effort: logs warning on failure instead of raising.
+
+    Args:
+        mythic_instance: Authenticated Mythic connection.
+        callback_display_id: Callback to execute cleanup on.
+        path: Directory path to remove.
+        os_type: Target OS ("Windows" or "Linux").
+
+    Returns:
+        True if cleanup succeeded, False otherwise.
+    """
+    from mythic import mythic
+
+    if os_type == "Windows":
+        command_str = f'rmdir /S /Q "{path}"'
+    else:
+        command_str = f"rm -rf {path}"
+
+    try:
+        await mythic.issue_task(
+            mythic_instance,
+            command_name="shell",
+            parameters=command_str,
+            callback_display_id=callback_display_id,
+            wait_for_complete=True,
+            timeout=30,
+        )
+        return True
+    except Exception as e:
+        logger.warning(
+            "Failed to clean up directory '%s' on callback %d: %s",
+            path,
+            callback_display_id,
+            e,
+        )
+        return False
+
+
 async def deactivate_callback(
     mythic_instance,
     callback_display_id: int,

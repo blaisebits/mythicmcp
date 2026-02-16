@@ -227,6 +227,7 @@ class YamlConfigModel(BaseModel):
 
     agent: AgentConfigModel
     commands: list[CommandConfigModel]
+    metadata: dict[str, Any] | None = None
 
     model_config = {"extra": "allow"}
 

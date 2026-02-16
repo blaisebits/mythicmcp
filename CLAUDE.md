@@ -65,6 +65,7 @@ Features are developed on branches named `feature/<name>`. Artifacts are stored 
 - N/A (stateless — tests interact with Mythic server and target systems) (005-integration-testing)
 - Python 3.10+ + mcp>=1.26.0, mythic>=0.2.10, pydantic>=2.0.0, pyyaml>=6.0.0 (006-yaml-plugin-config)
 - N/A (stateless — config files read at startup) (006-yaml-plugin-config)
+- N/A (stateless — YAML config files read at startup) (007-apollo-full-coverage)
 
 ## Installation
 
@@ -170,7 +171,7 @@ class MyAgentPlugin(AgentPlugin):
 
 ### Available Plugins
 
-- **Apollo** (10 tools, YAML-defined): shell, pwd, ls, cd, cat, ps, run, download, execute_assembly, screenshot
+- **Apollo** (78 tools, YAML-defined): Full coverage of Apollo 2.4.8 — shell, powershell, powerpick, ls, cat, download, upload, execute_assembly, mimikatz, and 69 more
 - **Arachne** (8 tools, Python-defined): shell, pwd, ls, cd, rm, download, upload, execute_assembly
 
 ## Core Tools
@@ -197,6 +198,6 @@ The MCP server exposes these core tools for Mythic operations:
 - `core_list_uploaded_files` - List files uploaded to Mythic
 
 ## Recent Changes
+- 007-apollo-full-coverage: Added Python 3.10+ + mcp>=1.26.0, mythic>=0.2.10, pydantic>=2.0.0, pyyaml>=6.0.0
 - 006-yaml-plugin-config: YAML-driven plugin config system. apollo.yaml replaces apollo.py, new yaml_loader.py module, pyyaml added to main dependencies. Plugins can now be defined via YAML without writing Python code.
 - 005-integration-testing: Added Python 3.10+ + pytest, pytest-asyncio, pyyaml, pydantic, mythic (0.2.10+)
-- 004-core-file-tools: Added 4 file management tools (upload, download, list downloaded/uploaded), base64 content encoding, file metadata via GraphQL
