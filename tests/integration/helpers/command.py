@@ -12,6 +12,7 @@ async def execute_test_command(
     mythic_instance,
     callback_id: int,
     command: TestCommandConfig,
+    file_ids: list[str] | None = None,
 ) -> tuple[bool, str]:
     """Execute a single test command and validate output.
 
@@ -19,6 +20,7 @@ async def execute_test_command(
         mythic_instance: Authenticated Mythic connection.
         callback_id: Callback display_id to execute on.
         command: Test command configuration.
+        file_ids: Optional list of Mythic file UUIDs to attach to the task.
 
     Returns:
         Tuple of (passed, output). If no expected_output is set, passed is True
@@ -26,14 +28,17 @@ async def execute_test_command(
     """
     from mythic import mythic
 
-    task = await mythic.issue_task(
-        mythic_instance,
+    kwargs: dict = dict(
         command_name=command.command,
         parameters=command.parameters,
         callback_display_id=callback_id,
         wait_for_complete=True,
         timeout=command.timeout,
     )
+    if file_ids:
+        kwargs["file_ids"] = file_ids
+
+    task = await mythic.issue_task(mythic_instance, **kwargs)
 
     task_id = task["id"]
     output_parts = await mythic.get_all_task_output_by_id(mythic_instance, task_id)
