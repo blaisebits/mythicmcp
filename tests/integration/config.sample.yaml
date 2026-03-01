@@ -317,14 +317,14 @@ test_commands:
     # Shell & Command Execution
     # =======================================================================
     - command: "shell"
-      parameters:
-        command: "id"
+      parameters: "id"
       expected_output: "uid="
       timeout: 60
     - command: "run"
       parameters:
         path: "/usr/bin/uname"
-        args: '["- a"]'
+        args:
+          - "-a"
       expected_output: "Linux"
       timeout: 60
 
@@ -341,8 +341,7 @@ test_commands:
       expected_output: ""
       timeout: 60
     - command: "mkdir"
-      parameters:
-        path: "/tmp/mcp_test"
+      parameters: "/tmp/mcp_test"
       expected_output: ""
       timeout: 30
     - command: "upload"
@@ -352,8 +351,7 @@ test_commands:
       expected_output: ""
       timeout: 120
     - command: "cat"
-      parameters:
-        path: "/tmp/mcp_test/test.txt"
+      parameters: "/tmp/mcp_test/test.txt"
       expected_output: "MythicMCP-test-fixture"
       timeout: 60
     - command: "chmod"
@@ -375,18 +373,15 @@ test_commands:
       expected_output: ""
       timeout: 60
     - command: "download"
-      parameters:
-        path: "/tmp/mcp_test/test.txt"
+      parameters: "/tmp/mcp_test/test.txt"
       expected_output: ""
       timeout: 120
     - command: "rm"
-      parameters:
-        path: "/tmp/mcp_test/test_moved.txt"
+      parameters: "/tmp/mcp_test/test_moved.txt"
       expected_output: ""
       timeout: 30
     - command: "rm"
-      parameters:
-        path: "/tmp/mcp_test/test.txt"
+      parameters: "/tmp/mcp_test/test.txt"
       expected_output: ""
       timeout: 30
 
@@ -411,5 +406,27 @@ test_commands:
       timeout: 30
     - command: "config"
       parameters: {}
+      expected_output: ""
+      timeout: 30
+    - command: "drives"
+      parameters: {}
+      expected_output: ""
+      timeout: 30
+    - command: "keys"
+      parameters:
+        command: "dumpsession"
+      expected_output: ""
+      timeout: 30
+
+    # =======================================================================
+    # Configuration & Control
+    # =======================================================================
+    - command: "print_c2"
+      parameters: {}
+      expected_output: ""
+      timeout: 30
+    - command: "shell_config"
+      parameters:
+        shell: "/bin/bash"
       expected_output: ""
       timeout: 30
