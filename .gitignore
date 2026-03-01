@@ -40,6 +40,10 @@ htmlcov/
 .tox/
 .nox/
 tests/integration/config.yaml
+tests/integration/config.yaml.*
+tests/integration/config.apollo.yaml
+tests/integration/config.arachne.yaml
+tests/integration/config.poseidon.yaml
 
 # Environment
 .env

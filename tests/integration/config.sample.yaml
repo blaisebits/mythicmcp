@@ -52,7 +52,7 @@ agents:
 
   - name: "poseidon"
     payload_type: "poseidon"
-    os: "macOS"
+    os: "Linux"
     filename: "poseidon_test"
     c2_profiles:
       - c2_profile: "http"
@@ -60,7 +60,7 @@ agents:
           callback_host: "https://10.5.10.10"
           callback_port: 443
     build_parameters: []
-    description: "Poseidon test payload for macOS targets"
+    description: "Poseidon test payload for Linux targets"
 
 # Target systems — each must have a pre-existing callback for file operations
 targets:
@@ -80,9 +80,9 @@ targets:
     agents:
       - "arachne"
 
-  - name: "macos-target"
-    hostname: "mac-vm"
-    os: "macOS"
+  - name: "linux-target-poseidon"
+    hostname: "debian-vm"
+    os: "Linux"
     callback_id: 3
     upload_path: "/tmp/test_payload"
     agents:
@@ -325,7 +325,7 @@ test_commands:
       parameters:
         path: "/usr/bin/uname"
         args: '["- a"]'
-      expected_output: "Darwin"
+      expected_output: "Linux"
       timeout: 60
 
     # =======================================================================
