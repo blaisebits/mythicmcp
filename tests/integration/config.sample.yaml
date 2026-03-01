@@ -50,6 +50,18 @@ agents:
     build_parameters: []
     description: "Arachne test payload for Linux targets"
 
+  - name: "poseidon"
+    payload_type: "poseidon"
+    os: "macOS"
+    filename: "poseidon_test"
+    c2_profiles:
+      - c2_profile: "http"
+        c2_profile_parameters:
+          callback_host: "https://10.5.10.10"
+          callback_port: 443
+    build_parameters: []
+    description: "Poseidon test payload for macOS targets"
+
 # Target systems — each must have a pre-existing callback for file operations
 targets:
   - name: "windows-target"
@@ -67,6 +79,14 @@ targets:
     upload_path: "/tmp/test_payload"
     agents:
       - "arachne"
+
+  - name: "macos-target"
+    hostname: "mac-vm"
+    os: "macOS"
+    callback_id: 3
+    upload_path: "/tmp/test_payload"
+    agents:
+      - "poseidon"
 
 # Test commands to run on verified callbacks, keyed by agent name.
 # Each command specifies the agent command, parameters, and expected output.
@@ -291,3 +311,105 @@ test_commands:
       parameters: {}
       expected_output: "/"
       timeout: 60
+
+  poseidon:
+    # =======================================================================
+    # Shell & Command Execution
+    # =======================================================================
+    - command: "shell"
+      parameters:
+        command: "id"
+      expected_output: "uid="
+      timeout: 60
+    - command: "run"
+      parameters:
+        path: "/usr/bin/uname"
+        args: '["- a"]'
+      expected_output: "Darwin"
+      timeout: 60
+
+    # =======================================================================
+    # File Operations — sequenced: pwd → ls → mkdir → upload → cat → chmod → cp → mv → download → rm
+    # =======================================================================
+    - command: "pwd"
+      parameters: {}
+      expected_output: "/"
+      timeout: 60
+    - command: "ls"
+      parameters:
+        path: "/tmp"
+      expected_output: ""
+      timeout: 60
+    - command: "mkdir"
+      parameters:
+        path: "/tmp/mcp_test"
+      expected_output: ""
+      timeout: 30
+    - command: "upload"
+      parameters:
+        file_id: "REPLACE_WITH_FILE_ID"
+        remote_path: "/tmp/mcp_test/test.txt"
+      expected_output: ""
+      timeout: 120
+    - command: "cat"
+      parameters:
+        path: "/tmp/mcp_test/test.txt"
+      expected_output: "MythicMCP-test-fixture"
+      timeout: 60
+    - command: "chmod"
+      parameters:
+        path: "/tmp/mcp_test/test.txt"
+        mode: "644"
+      expected_output: ""
+      timeout: 30
+    - command: "cp"
+      parameters:
+        source: "/tmp/mcp_test/test.txt"
+        destination: "/tmp/mcp_test/test_copy.txt"
+      expected_output: ""
+      timeout: 60
+    - command: "mv"
+      parameters:
+        source: "/tmp/mcp_test/test_copy.txt"
+        destination: "/tmp/mcp_test/test_moved.txt"
+      expected_output: ""
+      timeout: 60
+    - command: "download"
+      parameters:
+        path: "/tmp/mcp_test/test.txt"
+      expected_output: ""
+      timeout: 120
+    - command: "rm"
+      parameters:
+        path: "/tmp/mcp_test/test_moved.txt"
+      expected_output: ""
+      timeout: 30
+    - command: "rm"
+      parameters:
+        path: "/tmp/mcp_test/test.txt"
+      expected_output: ""
+      timeout: 30
+
+    # =======================================================================
+    # Process & Jobs
+    # =======================================================================
+    - command: "ps"
+      parameters: {}
+      expected_output: ""
+      timeout: 60
+
+    # =======================================================================
+    # Network & System Info
+    # =======================================================================
+    - command: "ifconfig"
+      parameters: {}
+      expected_output: ""
+      timeout: 30
+    - command: "getenv"
+      parameters: {}
+      expected_output: "PATH"
+      timeout: 30
+    - command: "config"
+      parameters: {}
+      expected_output: ""
+      timeout: 30
