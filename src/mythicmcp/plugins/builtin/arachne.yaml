@@ -5,6 +5,9 @@ agent:
     - Windows
     - Linux
 
+metadata:
+  agent_version: "0.0.4"
+
 commands:
   - name: shell
     description: "Execute a shell command on an Arachne webshell callback"
@@ -32,7 +35,7 @@ commands:
         default: "."
 
   - name: cd
-    description: "Change working directory on an Arachne webshell"
+    description: "Change working directory on an Arachne webshell (Windows only)"
     mythic_command: cd
     timeout: 60
     parameters:
@@ -56,13 +59,13 @@ commands:
     mythic_command: download
     timeout: 120
     parameters:
-      - name: path
+      - name: file_path
         type: string
         description: "Path to file to download"
         required: true
 
   - name: upload
-    description: "Upload a file to an Arachne webshell callback"
+    description: "Upload a file to an Arachne webshell callback. Use file_id from core_upload_file for the file parameter."
     mythic_command: upload
     timeout: 120
     parameters:
@@ -70,21 +73,21 @@ commands:
         type: string
         description: "Destination path on target"
         required: true
-      - name: file_contents
+      - name: file
         type: string
-        description: "Base64-encoded file contents"
+        description: "file_id from core_upload_file for the file to upload"
         required: true
 
   - name: execute_assembly
-    description: "Execute a .NET assembly on an Arachne ASPX webshell (Windows only)"
+    description: "Execute a .NET assembly on an Arachne ASPX webshell (Windows/ASPX only). Use file_id from core_upload_file for the file parameter."
     mythic_command: execute_assembly
     timeout: 120
     parameters:
-      - name: assembly_name
+      - name: file
         type: string
-        description: "Name of registered .NET assembly"
+        description: "file_id from core_upload_file containing the .NET assembly"
         required: true
-      - name: assembly_arguments
+      - name: arguments
         type: string
         description: "Arguments to pass to assembly"
         default: ""
