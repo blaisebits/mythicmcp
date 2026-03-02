@@ -26,7 +26,9 @@ agents:
     c2_profiles:
       - c2_profile: "webshell"
         c2_profile_parameters:
-          url: "https://example.com/evil.php"
+          # URL must match the upload_path filename on the target.
+          # Use http:// or https:// to match the target's web server config.
+          url: "http://TARGET_IP/uploads/arachne_test.php"
           cookie_name: "session"
           query_param: "id"
           user_agent: "Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko"
@@ -37,12 +39,21 @@ targets:
   - name: "linux-target"
     hostname: "debian-vm"
     os: "Linux"
+    # callback_id: ID of a pre-existing callback on the target (used to
+    # upload the webshell file). This callback must have write access to
+    # the upload_path directory.
     callback_id: 1
-    upload_path: "/var/www/html/evil.php"
+    # upload_path must be in a www-data-writable directory so the
+    # pre-existing callback can write the file. The filename must match
+    # the c2_profile url path above.
+    upload_path: "/var/www/html/uploads/arachne_test.php"
     agents:
       - "arachne"
 
 # Prerequisites:
+#   - A pre-existing callback on the target with write access to upload_path
+#   - A web server on the target serving upload_path over HTTP/HTTPS
+#   - The upload directory must be writable by the callback's user (e.g. www-data)
 #   - The test runner auto-uploads tests/integration/fixtures/test_upload.txt
 #     and substitutes REPLACE_WITH_FILE_ID at runtime. No manual step needed.
 test_commands:
@@ -60,7 +71,7 @@ test_commands:
       timeout: 60
 
     # =======================================================================
-    # File Operations — sequenced: pwd → ls → mkdir → upload → cat → cp → mv → download → rm
+    # File Operations — sequenced: pwd → ls → mkdir → upload → cat → download → rm
     # =======================================================================
     - command: "pwd"
       parameters: {}
