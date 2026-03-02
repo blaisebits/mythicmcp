@@ -9,10 +9,18 @@ from tests.integration.config_models import TargetConfig
 logger = logging.getLogger(__name__)
 
 
+def _shell_params(agent_name: str, command_str: str):
+    """Format shell parameters for the given agent.
+
+    All agents (Apollo, Arachne, Poseidon) take a raw command-line string.
+    """
+    return command_str
+
+
 async def cleanup_payload_on_target(
     mythic_instance,
     target: TargetConfig,
-    agent_type: str = "apollo",
+    agent_name: str = "",
 ) -> bool:
     """Remove the uploaded payload file from the target system.
 
@@ -21,27 +29,26 @@ async def cleanup_payload_on_target(
     Args:
         mythic_instance: Authenticated Mythic connection.
         target: Target config (includes upload_path and callback_id).
-        agent_type: Agent payload type (determines shell vs run command).
+        agent_name: Agent name (for parameter formatting).
 
     Returns:
         True if cleanup succeeded, False otherwise.
     """
     from mythic import mythic
 
+    if not agent_name:
+        agent_name = target.agents[0] if target.agents else ""
+
     if target.os == "Windows":
         command_str = f"del {target.upload_path}"
     else:
         command_str = f"rm -f {target.upload_path}"
 
-    # Only Apollo has 'run'; other agents use 'shell'
-    agents_with_run = {"apollo"}
-    command_name = "run" if agent_type in agents_with_run else "shell"
-
     try:
         await mythic.issue_task(
             mythic_instance,
-            command_name=command_name,
-            parameters=command_str,
+            command_name="shell",
+            parameters=_shell_params(agent_name, command_str),
             callback_display_id=target.callback_id,
             wait_for_complete=True,
             timeout=30,
@@ -52,6 +59,55 @@ async def cleanup_payload_on_target(
             "Failed to clean up payload on %s (callback %d): %s",
             target.name,
             target.callback_id,
+            e,
+        )
+        return False
+
+
+async def cleanup_test_directory(
+    mythic_instance,
+    callback_display_id: int,
+    path: str,
+    *,
+    os_type: str = "Windows",
+    agent_name: str = "",
+) -> bool:
+    """Remove a test directory tree from the target system.
+
+    Best-effort: logs warning on failure instead of raising.
+
+    Args:
+        mythic_instance: Authenticated Mythic connection.
+        callback_display_id: Callback to execute cleanup on.
+        path: Directory path to remove.
+        os_type: Target OS ("Windows" or "Linux").
+        agent_name: Agent name (for parameter formatting).
+
+    Returns:
+        True if cleanup succeeded, False otherwise.
+    """
+    from mythic import mythic
+
+    if os_type == "Windows":
+        command_str = f'rmdir /S /Q "{path}"'
+    else:
+        command_str = f"rm -rf {path}"
+
+    try:
+        await mythic.issue_task(
+            mythic_instance,
+            command_name="shell",
+            parameters=_shell_params(agent_name, command_str),
+            callback_display_id=callback_display_id,
+            wait_for_complete=True,
+            timeout=30,
+        )
+        return True
+    except Exception as e:
+        logger.warning(
+            "Failed to clean up directory '%s' on callback %d: %s",
+            path,
+            callback_display_id,
             e,
         )
         return False

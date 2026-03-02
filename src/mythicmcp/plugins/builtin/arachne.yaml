@@ -6,7 +6,7 @@ agent:
     - Linux
 
 metadata:
-  agent_version: "0.0.4"
+  agent_version: "1.0.0"
 
 commands:
   - name: shell

