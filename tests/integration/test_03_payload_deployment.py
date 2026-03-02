@@ -11,6 +11,7 @@ from tests.integration.helpers.deployment import (
     delete_existing_payload_file,
     upload_payload_to_target,
     execute_payload_on_target,
+    activate_webshell_callback,
 )
 from tests.integration import state
 
@@ -43,15 +44,19 @@ class TestPayloadDeployment:
                 assert payload_bytes, f"No payload bytes for {agent_name}/{target.name}"
 
                 try:
-                    # Kill any leftover process from a prior run to avoid file locks
-                    await kill_existing_payload_process(
-                        mythic_instance, target
-                    )
-
-                    # Delete stale payload file from disk before uploading new one
-                    await delete_existing_payload_file(
-                        mythic_instance, target
-                    )
+                    if agent_config.is_webshell:
+                        # Webshells: skip kill (no process), just delete stale file
+                        await delete_existing_payload_file(
+                            mythic_instance, target
+                        )
+                    else:
+                        # Standard agents: kill process then delete file
+                        await kill_existing_payload_process(
+                            mythic_instance, target
+                        )
+                        await delete_existing_payload_file(
+                            mythic_instance, target
+                        )
 
                     # Capture baseline callback IDs before upload
                     baseline_ids = await get_baseline_callback_ids(mythic_instance)
@@ -79,12 +84,38 @@ class TestPayloadDeployment:
                     )
 
                 agent_config = _get_agent_config(integration_config, agent_name)
+                s = state.get_state(agent_name, target.name)
 
                 try:
-                    await execute_payload_on_target(
-                        mythic_instance, target, agent_config
-                    )
-                    state.set_phase_result(agent_name, target.name, "execution", True)
+                    if agent_config.is_webshell:
+                        # Webshell: find placeholder callback and issue checkin
+                        payload_uuid = s.get("payload_uuid")
+                        assert payload_uuid, (
+                            f"No payload_uuid for webshell {agent_name}/{target.name}"
+                        )
+
+                        new_callback_id = await activate_webshell_callback(
+                            mythic_instance,
+                            payload_uuid,
+                            timeout=integration_config.timeouts.callback_verification,
+                            poll_interval=integration_config.timeouts.polling_interval,
+                        )
+                        s["new_callback_id"] = new_callback_id
+
+                        # Mark downstream phases as passed so test_04/05 don't skip
+                        state.set_phase_result(
+                            agent_name, target.name, "execution", True
+                        )
+                        state.set_phase_result(
+                            agent_name, target.name, "callback_verification", True
+                        )
+                    else:
+                        await execute_payload_on_target(
+                            mythic_instance, target, agent_config
+                        )
+                        state.set_phase_result(
+                            agent_name, target.name, "execution", True
+                        )
 
                 except Exception as e:
                     state.set_phase_result(agent_name, target.name, "execution", False)

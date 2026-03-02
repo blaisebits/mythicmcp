@@ -5,11 +5,14 @@ Provides session-scoped fixtures for config loading and Mythic connection.
 
 from __future__ import annotations
 
+from pathlib import Path
 from urllib.parse import urlparse
 
 import pytest
 
 from tests.integration.config_models import IntegrationTestConfig, load_integration_config
+
+_FIXTURE_FILE = Path(__file__).parent / "fixtures" / "test_upload.txt"
 
 
 pytestmark = pytest.mark.integration
@@ -73,3 +76,23 @@ async def mythic_instance(integration_config: IntegrationTestConfig):
         pytest.skip(f"Mythic server unreachable: {e}")
 
     return instance
+
+
+@pytest.fixture(scope="session")
+async def test_file_id(mythic_instance):
+    """Upload test fixture file to Mythic and return its file_id.
+
+    This file_id replaces REPLACE_WITH_FILE_ID placeholders in test commands.
+    """
+    from mythic import mythic
+
+    if not _FIXTURE_FILE.exists():
+        pytest.skip(f"Test fixture not found: {_FIXTURE_FILE}")
+
+    file_id = await mythic.register_file(
+        mythic_instance,
+        filename=_FIXTURE_FILE.name,
+        contents=_FIXTURE_FILE.read_bytes(),
+    )
+    assert file_id, "register_file returned empty file_id"
+    return file_id

@@ -22,11 +22,14 @@ agents:
     payload_type: "arachne"
     os: "Linux"
     filename: "arachne_test"
+    agent_type: "webshell"
     c2_profiles:
-      - c2_profile: "http"
+      - c2_profile: "webshell"
         c2_profile_parameters:
-          callback_host: "https://10.5.10.10"
-          callback_port: 443
+          url: "https://example.com/evil.php"
+          cookie_name: "session"
+          query_param: "id"
+          user_agent: "Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko"
     build_parameters: []
     description: "Arachne test payload for Linux targets"
 
@@ -35,7 +38,7 @@ targets:
     hostname: "debian-vm"
     os: "Linux"
     callback_id: 1
-    upload_path: "/tmp/test_payload"
+    upload_path: "/var/www/html/evil.php"
     agents:
       - "arachne"
 

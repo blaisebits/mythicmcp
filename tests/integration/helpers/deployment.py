@@ -150,7 +150,10 @@ async def execute_payload_on_target(
 ) -> None:
     """Execute an uploaded payload on the target system.
 
-    Uses the 'run' command which executes directly without cmd.exe wrapper.
+    Webshell agents skip execution — the payload is a file served by a web
+    server, not a binary to run. Use activate_webshell_callback() instead.
+
+    Uses 'run' for agents that support it (e.g. Apollo), falls back to 'shell'.
 
     Args:
         mythic_instance: Authenticated Mythic connection.
@@ -159,18 +162,98 @@ async def execute_payload_on_target(
     """
     from mythic import mythic
 
+    if agent_config.is_webshell:
+        logger.info(
+            "Skipping execute for webshell agent '%s' on %s",
+            agent_config.name, target.name,
+        )
+        return
+
+    # Agents like Arachne (webshells) only have 'shell', not 'run'
+    agents_with_run = {"apollo"}
+    use_run = agent_config.payload_type in agents_with_run
+
     if target.os == "Windows":
-        # Use 'run' for direct execution (no cmd.exe wrapper)
         command_str = target.upload_path
     else:
-        # Linux: make executable and run in background
         command_str = f"chmod +x {target.upload_path} && {target.upload_path} &"
 
     await mythic.issue_task(
         mythic_instance,
-        command_name="run",
+        command_name="run" if use_run else "shell",
         parameters=command_str,
         callback_display_id=target.callback_id,
         wait_for_complete=False,
         timeout=30,
     )
+
+
+async def activate_webshell_callback(
+    mythic_instance,
+    payload_uuid: str,
+    timeout: int = 60,
+    poll_interval: int = 5,
+) -> int:
+    """Find the placeholder callback for a webshell payload and issue checkin.
+
+    Webshell agents create a placeholder callback at payload generation time
+    via SendMythicRPCCallbackCreate. This function locates that callback and
+    issues a 'checkin' command to populate host info (IP, OS, user, hostname).
+
+    Must be called AFTER the webshell file is uploaded and reachable at the
+    C2 profile URL — checkin will fail if the webshell isn't deployed yet.
+
+    Args:
+        mythic_instance: Authenticated Mythic connection.
+        payload_uuid: UUID of the generated webshell payload.
+        timeout: Max seconds to wait for placeholder callback to appear.
+        poll_interval: Seconds between polls.
+
+    Returns:
+        Callback display_id of the activated callback.
+
+    Raises:
+        TimeoutError: Placeholder callback not found within timeout.
+        RuntimeError: Checkin command failed.
+    """
+    import asyncio
+    import time
+
+    from mythic import mythic
+
+    from tests.integration.helpers.callback import get_callback_for_payload
+
+    start = time.time()
+    callback_id = None
+
+    while (time.time() - start) < timeout:
+        callback_id = await get_callback_for_payload(mythic_instance, payload_uuid)
+        if callback_id is not None:
+            break
+        await asyncio.sleep(poll_interval)
+
+    if callback_id is None:
+        raise TimeoutError(
+            f"No placeholder callback found for payload {payload_uuid} "
+            f"after {int(time.time() - start)}s"
+        )
+
+    logger.info("Found placeholder callback %d for payload %s", callback_id, payload_uuid)
+
+    # Issue checkin to populate host info (IP, OS, user, hostname, PID, arch)
+    try:
+        await mythic.issue_task(
+            mythic_instance,
+            command_name="checkin",
+            parameters="",
+            callback_display_id=callback_id,
+            wait_for_complete=True,
+            timeout=60,
+        )
+        logger.info("Checkin succeeded on callback %d", callback_id)
+    except Exception as e:
+        raise RuntimeError(
+            f"Checkin failed on callback {callback_id}: {e}"
+        ) from e
+
+    return callback_id
