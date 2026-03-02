@@ -63,6 +63,11 @@ class AgentConfig(BaseModel):
     c2_profiles: list[C2ProfileConfig]
     build_parameters: list[BuildParam] = Field(default_factory=list)
     description: str = ""
+    agent_type: str = "standard"  # "standard" or "webshell"
+
+    @property
+    def is_webshell(self) -> bool:
+        return self.agent_type == "webshell"
 
 
 class TargetConfig(BaseModel):

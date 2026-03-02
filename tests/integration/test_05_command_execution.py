@@ -92,16 +92,24 @@ class TestCommandExecution:
                 )
 
                 # Set sleep to 0 so commands execute immediately
-                from mythic import mythic as mythic_api
-                await mythic_api.issue_task(
-                    mythic_instance,
-                    command_name="sleep",
-                    parameters="0",
-                    callback_display_id=new_callback_id,
-                    wait_for_complete=True,
-                    timeout=30,
-                )
-                logger.info("Set sleep 0 on callback %d", new_callback_id)
+                # (skip for webshell agents — they don't have a sleep command)
+                agent_config = None
+                for a in integration_config.agents:
+                    if a.name == agent_name:
+                        agent_config = a
+                        break
+
+                if agent_config and not agent_config.is_webshell:
+                    from mythic import mythic as mythic_api
+                    await mythic_api.issue_task(
+                        mythic_instance,
+                        command_name="sleep",
+                        parameters="0",
+                        callback_display_id=new_callback_id,
+                        wait_for_complete=True,
+                        timeout=30,
+                    )
+                    logger.info("Set sleep 0 on callback %d", new_callback_id)
 
                 commands = integration_config.test_commands.get(agent_name, [])
 

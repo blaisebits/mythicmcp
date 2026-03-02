@@ -24,6 +24,13 @@ TEST_DIRECTORIES = {
 }
 
 
+def _get_agent_config(config: IntegrationTestConfig, agent_name: str):
+    for agent in config.agents:
+        if agent.name == agent_name:
+            return agent
+    raise ValueError(f"Agent '{agent_name}' not found")
+
+
 class TestCleanup:
     """Remove uploaded payloads and deactivate new callbacks."""
 
@@ -31,6 +38,14 @@ class TestCleanup:
         """Remove uploaded payload files from target systems."""
         for target in integration_config.targets:
             for agent_name in target.agents:
+                agent_config = _get_agent_config(integration_config, agent_name)
+
+                # Webshell payloads: the uploaded file IS the agent — don't
+                # delete it here since we need it alive for command execution.
+                # The webshell file can be cleaned up manually after testing.
+                if agent_config.is_webshell:
+                    continue
+
                 # Cleanup is best-effort — don't skip if earlier phases failed,
                 # but warn if cleanup itself fails (per FR-020).
                 success = await cleanup_payload_on_target(mythic_instance, target, agent_name)

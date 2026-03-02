@@ -6,6 +6,28 @@ import asyncio
 import time
 
 
+async def get_callback_for_payload(mythic_instance, payload_uuid: str) -> int | None:
+    """Find the callback created for a payload UUID.
+
+    Webshell agents create a placeholder callback via SendMythicRPCCallbackCreate
+    at payload generation time. This finds that callback by matching the payload UUID.
+
+    Args:
+        mythic_instance: Authenticated Mythic connection.
+        payload_uuid: UUID of the generated payload.
+
+    Returns:
+        Callback display_id or None if not found.
+    """
+    from mythic import mythic
+
+    callbacks = await mythic.get_all_callbacks(mythic_instance)
+    for cb in callbacks:
+        if cb.get("payload", {}).get("uuid") == payload_uuid:
+            return cb["display_id"]
+    return None
+
+
 async def get_baseline_callback_ids(mythic_instance) -> set[int]:
     """Capture current active callback IDs before payload execution.
 

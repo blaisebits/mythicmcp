@@ -33,6 +33,17 @@ class TestCallbackVerification:
 
                 agent_config = _get_agent_config(integration_config, agent_name)
                 s = state.get_state(agent_name, target.name)
+
+                # Webshell callbacks are already captured in test_03
+                if agent_config.is_webshell:
+                    new_callback_id = s.get("new_callback_id")
+                    assert new_callback_id, (
+                        f"Webshell callback not found in state for "
+                        f"{agent_name}/{target.name} — test_03 should have set it"
+                    )
+                    # Already marked callback_verification=True in test_03
+                    continue
+
                 baseline_ids = s.get("baseline_callback_ids", set())
 
                 try:
