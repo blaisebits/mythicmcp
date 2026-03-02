@@ -931,13 +931,16 @@ class TestBuiltinPlugins:
         plugins = registry.list_plugins()
         assert "apollo" in plugins  # from YAML
         assert "arachne" in plugins  # from YAML
+        assert "poseidon" in plugins  # from YAML
 
         # Verify tool counts
         all_tools = registry.get_all_tools()
         apollo_tools = [n for n in all_tools if n.startswith("apollo_")]
         arachne_tools = [n for n in all_tools if n.startswith("arachne_")]
+        poseidon_tools = [n for n in all_tools if n.startswith("poseidon_")]
         assert len(apollo_tools) == 78
         assert len(arachne_tools) == 8
+        assert len(poseidon_tools) == 74
 
         _registry.clear()
 
@@ -1139,3 +1142,127 @@ class TestMetadataField:
         assert isinstance(result, YamlConfigModel)
         assert result.metadata is not None
         assert "agent_version" in result.metadata
+
+
+# =============================================================================
+# Poseidon YAML Config Tests
+# =============================================================================
+
+
+class TestPoseidonYamlConfig:
+    """Verify the builtin Poseidon YAML config loads correctly."""
+
+    @staticmethod
+    def _poseidon_path() -> Path:
+        return Path(__file__).parent.parent.parent / "src" / "mythicmcp" / "plugins" / "builtin" / "poseidon.yaml"
+
+    def test_poseidon_yaml_loads(self) -> None:
+        """Poseidon YAML loads without validation errors."""
+        result = load_yaml_plugin(self._poseidon_path())
+        assert not isinstance(result, YamlConfigError), f"Load failed: {result}"
+
+    def test_poseidon_command_count(self) -> None:
+        """Poseidon has >= 70 commands (74 expected)."""
+        result = load_yaml_plugin(self._poseidon_path())
+        assert not isinstance(result, YamlConfigError)
+        tools = result.get_tools()
+        assert len(tools) >= 70, f"Expected >= 70 tools, got {len(tools)}"
+        assert len(tools) == 74
+
+    def test_poseidon_agent_metadata(self) -> None:
+        """Poseidon agent name, description, supported_os are correct."""
+        result = load_yaml_plugin(self._poseidon_path())
+        assert not isinstance(result, YamlConfigError)
+        assert result.agent_name == "poseidon"
+        assert "macOS" in result.agent_description or "Poseidon" in result.agent_description
+        assert set(result.supported_os) == {"macOS", "Linux"}
+
+    def test_poseidon_metadata_version(self) -> None:
+        """Poseidon metadata includes agent_version 2.2.8."""
+        result = parse_yaml_config(self._poseidon_path())
+        assert isinstance(result, YamlConfigModel)
+        assert result.metadata is not None
+        assert result.metadata["agent_version"] == "2.2.8"
+
+
+class TestPoseidonSpotChecks:
+    """Spot-check specific Poseidon commands for correct parameter definitions."""
+
+    @staticmethod
+    def _load_poseidon_tools() -> list:
+        path = Path(__file__).parent.parent.parent / "src" / "mythicmcp" / "plugins" / "builtin" / "poseidon.yaml"
+        result = load_yaml_plugin(path)
+        assert not isinstance(result, YamlConfigError)
+        return result.get_tools()
+
+    def _find_tool(self, name: str):
+        tools = self._load_poseidon_tools()
+        matches = [t for t in tools if t.name == name]
+        assert len(matches) == 1, f"Tool '{name}' not found"
+        return matches[0]
+
+    def test_shell_has_command_param(self) -> None:
+        """shell command has required string 'command' parameter."""
+        tool = self._find_tool("shell")
+        fields = tool.parameters.model_fields
+        assert "command" in fields
+        assert fields["command"].annotation is str
+        assert fields["command"].is_required()
+
+    def test_curl_has_method_choices(self) -> None:
+        """curl command has 'method' param with choices field."""
+        path = Path(__file__).parent.parent.parent / "src" / "mythicmcp" / "plugins" / "builtin" / "poseidon.yaml"
+        result = parse_yaml_config(path)
+        assert isinstance(result, YamlConfigModel)
+        curl_cmd = next(c for c in result.commands if c.name == "curl")
+        method_param = next(p for p in curl_cmd.parameters if p.name == "method")
+        assert method_param.choices is not None
+        assert "GET" in method_param.choices
+        assert "POST" in method_param.choices
+
+    def test_portscan_has_hosts_param(self) -> None:
+        """portscan command has required 'hosts' parameter."""
+        tool = self._find_tool("portscan")
+        fields = tool.parameters.model_fields
+        assert "hosts" in fields
+        assert fields["hosts"].is_required()
+
+    def test_upload_has_file_id_and_remote_path(self) -> None:
+        """upload command has 'file_id' (required) and 'remote_path' params."""
+        tool = self._find_tool("upload")
+        fields = tool.parameters.model_fields
+        assert "file_id" in fields
+        assert "remote_path" in fields
+        assert fields["file_id"].is_required()
+
+    def test_jxa_macos_has_mythic_command(self) -> None:
+        """jxa_macos command has mythic_command set to 'jxa'."""
+        path = Path(__file__).parent.parent.parent / "src" / "mythicmcp" / "plugins" / "builtin" / "poseidon.yaml"
+        result = parse_yaml_config(path)
+        assert isinstance(result, YamlConfigModel)
+        jxa_cmd = next(c for c in result.commands if c.name == "jxa_macos")
+        assert jxa_cmd.mythic_command == "jxa"
+
+    def test_macos_commands_have_mythic_command_mapping(self) -> None:
+        """All _macos suffixed commands have mythic_command without the suffix."""
+        path = Path(__file__).parent.parent.parent / "src" / "mythicmcp" / "plugins" / "builtin" / "poseidon.yaml"
+        result = parse_yaml_config(path)
+        assert isinstance(result, YamlConfigModel)
+        macos_cmds = [c for c in result.commands if c.name.endswith("_macos")]
+        assert len(macos_cmds) >= 20, f"Expected >= 20 macOS commands, got {len(macos_cmds)}"
+        for cmd in macos_cmds:
+            assert cmd.mythic_command is not None, f"{cmd.name} missing mythic_command"
+            assert not cmd.mythic_command.endswith("_macos"), (
+                f"{cmd.name} mythic_command should not end with _macos, got '{cmd.mythic_command}'"
+            )
+
+    def test_macos_descriptions_have_prefix(self) -> None:
+        """All _macos commands have '(macOS only)' in description."""
+        path = Path(__file__).parent.parent.parent / "src" / "mythicmcp" / "plugins" / "builtin" / "poseidon.yaml"
+        result = parse_yaml_config(path)
+        assert isinstance(result, YamlConfigModel)
+        macos_cmds = [c for c in result.commands if c.name.endswith("_macos")]
+        for cmd in macos_cmds:
+            assert "(macOS only)" in cmd.description, (
+                f"{cmd.name} description missing '(macOS only)': {cmd.description}"
+            )

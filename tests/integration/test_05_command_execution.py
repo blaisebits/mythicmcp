@@ -91,6 +91,18 @@ class TestCommandExecution:
                     f"No callback ID for {agent_name}/{target.name}"
                 )
 
+                # Set sleep to 0 so commands execute immediately
+                from mythic import mythic as mythic_api
+                await mythic_api.issue_task(
+                    mythic_instance,
+                    command_name="sleep",
+                    parameters="0",
+                    callback_display_id=new_callback_id,
+                    wait_for_complete=True,
+                    timeout=30,
+                )
+                logger.info("Set sleep 0 on callback %d", new_callback_id)
+
                 commands = integration_config.test_commands.get(agent_name, [])
 
                 # Upload fixture and substitute file_id if any command uses placeholder
@@ -111,7 +123,8 @@ class TestCommandExecution:
                         cmd.command == "upload"
                         and isinstance(cmd.parameters, dict)
                         and file_id
-                        and cmd.parameters.get("file") == file_id
+                        and (cmd.parameters.get("file") == file_id
+                             or cmd.parameters.get("file_id") == file_id)
                     ):
                         cmd_file_ids = [file_id]
 

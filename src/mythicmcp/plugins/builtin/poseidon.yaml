@@ -1,0 +1,1052 @@
+agent:
+  name: poseidon
+  description: "Poseidon cross-platform (macOS/Linux) Golang agent"
+  supported_os:
+    - macOS
+    - Linux
+
+metadata:
+  agent_version: "2.2.8"
+  mythic_version: "3.3.0+"
+
+commands:
+  # =========================================================================
+  # Shell & Command Execution (5)
+  # =========================================================================
+
+  - name: shell
+    description: "Execute a shell command via /bin/sh on a Poseidon callback"
+    mythic_command: shell
+    timeout: 60
+    parameters:
+      - name: command
+        type: string
+        description: "Shell command to execute"
+        required: true
+
+  - name: pty
+    description: "Open an interactive PTY session on a Poseidon callback"
+    mythic_command: pty
+    timeout: 60
+    parameters:
+      - name: program_path
+        type: string
+        description: "Program to run in PTY"
+        default: "/bin/bash"
+      - name: open_port
+        type: boolean
+        description: "Open a port for the PTY instead of using Mythic's interactive tasking"
+        default: false
+
+  - name: run
+    description: "Execute a program from disk with arguments on a Poseidon callback"
+    mythic_command: run
+    timeout: 60
+    parameters:
+      - name: path
+        type: string
+        description: "Path to executable"
+        required: true
+      - name: args
+        type: string
+        description: "Arguments to pass (JSON array of strings, e.g. [\"arg1\", \"arg2\"])"
+        default: ""
+
+  - name: jxa_macos
+    description: "(macOS only) Execute JavaScript for Automation code on a Poseidon callback"
+    mythic_command: jxa
+    timeout: 120
+    parameters:
+      - name: code
+        type: string
+        description: "JXA code to execute (base64-encoded)"
+        required: true
+
+  - name: ssh
+    description: "Open an interactive SSH session on a Poseidon callback"
+    mythic_command: ssh
+    timeout: 120
+    parameters:
+      - name: username
+        type: string
+        description: "SSH username"
+        required: true
+      - name: host
+        type: string
+        description: "Target host"
+        default: "127.0.0.1"
+      - name: port
+        type: integer
+        description: "SSH port"
+        default: 22
+      - name: password
+        type: string
+        description: "SSH password (use this or private_key)"
+        default: ""
+      - name: private_key
+        type: string
+        description: "SSH private key (use this or password)"
+        default: ""
+
+  # =========================================================================
+  # File Operations (14)
+  # =========================================================================
+
+  - name: ls
+    description: "List directory contents on a Poseidon callback"
+    mythic_command: ls
+    timeout: 60
+    parameters:
+      - name: path
+        type: string
+        description: "Path to list (default: current directory)"
+        default: "."
+      - name: depth
+        type: integer
+        description: "Depth of directory listing"
+        default: 1
+        min: 1
+
+  - name: cat
+    description: "Read file contents on a Poseidon callback"
+    mythic_command: cat
+    timeout: 60
+    parameters:
+      - name: path
+        type: string
+        description: "Path to file to read"
+        required: true
+
+  - name: cd
+    description: "Change working directory on a Poseidon callback"
+    mythic_command: cd
+    timeout: 60
+    parameters:
+      - name: path
+        type: string
+        description: "Path to change to"
+        required: true
+
+  - name: pwd
+    description: "Get current working directory of a Poseidon callback"
+    mythic_command: pwd
+    timeout: 60
+
+  - name: head
+    description: "Read the first N lines of a file on a Poseidon callback"
+    mythic_command: head
+    timeout: 60
+    parameters:
+      - name: path
+        type: string
+        description: "Path to file"
+        required: true
+      - name: lines
+        type: integer
+        description: "Number of lines to read (-1 for default)"
+        default: -1
+
+  - name: tail
+    description: "Read the last N lines of a file on a Poseidon callback"
+    mythic_command: tail
+    timeout: 60
+    parameters:
+      - name: path
+        type: string
+        description: "Path to file"
+        required: true
+      - name: lines
+        type: integer
+        description: "Number of lines to read (-1 for default)"
+        default: -1
+
+  - name: mkdir
+    description: "Create a directory on a Poseidon callback"
+    mythic_command: mkdir
+    timeout: 60
+    parameters:
+      - name: path
+        type: string
+        description: "Directory path to create"
+        required: true
+
+  - name: rm
+    description: "Delete a file or directory on a Poseidon callback"
+    mythic_command: rm
+    timeout: 60
+    parameters:
+      - name: path
+        type: string
+        description: "Path to file or directory to remove"
+        required: true
+
+  - name: cp
+    description: "Copy a file on a Poseidon callback"
+    mythic_command: cp
+    timeout: 60
+    parameters:
+      - name: source
+        type: string
+        description: "Source file path"
+        required: true
+      - name: destination
+        type: string
+        description: "Destination file path"
+        required: true
+
+  - name: mv
+    description: "Move or rename a file on a Poseidon callback"
+    mythic_command: mv
+    timeout: 60
+    parameters:
+      - name: source
+        type: string
+        description: "Source file path"
+        required: true
+      - name: destination
+        type: string
+        description: "Destination file path"
+        required: true
+
+  - name: download
+    description: "Download a file from a Poseidon callback"
+    mythic_command: download
+    timeout: 120
+    parameters:
+      - name: path
+        type: string
+        description: "Path to file to download"
+        required: true
+
+  - name: upload
+    description: "Upload a file to a Poseidon callback. Use file_id from core_upload_file."
+    mythic_command: upload
+    timeout: 120
+    parameters:
+      - name: file_id
+        type: string
+        description: "File UUID from core_upload_file"
+        required: true
+      - name: remote_path
+        type: string
+        description: "Destination path on target"
+        default: ""
+      - name: overwrite
+        type: boolean
+        description: "Overwrite existing file"
+        default: false
+
+  - name: download_bulk
+    description: "Download and optionally compress multiple files from a Poseidon callback"
+    mythic_command: download_bulk
+    timeout: 300
+    parameters:
+      - name: paths
+        type: string
+        description: "JSON array of file paths to download (e.g. [\"/etc/passwd\", \"/etc/hosts\"])"
+        required: true
+      - name: compress
+        type: boolean
+        description: "Compress files into archive"
+        default: true
+
+  - name: triagedirectory
+    description: "Find interesting files in a directory on a Poseidon callback"
+    mythic_command: triagedirectory
+    timeout: 120
+    parameters:
+      - name: path
+        type: string
+        description: "Directory path to triage"
+        required: true
+
+  # =========================================================================
+  # Process Management (4)
+  # =========================================================================
+
+  - name: ps
+    description: "List running processes on a Poseidon callback"
+    mythic_command: ps
+    timeout: 60
+    parameters:
+      - name: regex_filter
+        type: string
+        description: "Optional regex filter for process names"
+        default: ""
+
+  - name: kill
+    description: "Kill a process by PID on a Poseidon callback"
+    mythic_command: kill
+    timeout: 60
+    parameters:
+      - name: pid
+        type: integer
+        description: "Process ID to kill"
+        required: true
+
+  - name: jobkill
+    description: "Kill a background job on a Poseidon callback"
+    mythic_command: jobkill
+    timeout: 60
+    parameters:
+      - name: id
+        type: string
+        description: "Job ID to kill"
+        required: true
+
+  - name: jobs
+    description: "List running background jobs on a Poseidon callback"
+    mythic_command: jobs
+    timeout: 60
+
+  # =========================================================================
+  # Environment Variables (6)
+  # =========================================================================
+
+  - name: getenv
+    description: "Get all environment variables on a Poseidon callback"
+    mythic_command: getenv
+    timeout: 60
+
+  - name: setenv
+    description: "Set an environment variable on a Poseidon callback"
+    mythic_command: setenv
+    timeout: 60
+    parameters:
+      - name: name
+        type: string
+        description: "Variable name"
+        required: true
+      - name: value
+        type: string
+        description: "Variable value"
+        required: true
+
+  - name: unsetenv
+    description: "Unset an environment variable on a Poseidon callback"
+    mythic_command: unsetenv
+    timeout: 60
+    parameters:
+      - name: name
+        type: string
+        description: "Variable name to unset"
+        required: true
+
+  - name: curl_env_get
+    description: "Get curl-related environment variables on a Poseidon callback"
+    mythic_command: curl_env_get
+    timeout: 60
+
+  - name: curl_env_set
+    description: "Set curl-related environment variables on a Poseidon callback"
+    mythic_command: curl_env_set
+    timeout: 60
+    parameters:
+      - name: setEnv
+        type: string
+        description: "JSON array of {name,value} objects to set (e.g. [{\"name\":\"key\",\"value\":\"val\"}])"
+        default: ""
+
+  - name: curl_env_clear
+    description: "Clear curl-related environment variables on a Poseidon callback"
+    mythic_command: curl_env_clear
+    timeout: 60
+    parameters:
+      - name: clearAllEnv
+        type: boolean
+        description: "Clear all curl environment variables"
+        default: false
+      - name: clearEnv
+        type: string
+        description: "JSON array of variable names to clear (e.g. [\"VAR1\", \"VAR2\"])"
+        default: ""
+
+  # =========================================================================
+  # User & Credential Management (5)
+  # =========================================================================
+
+  - name: getuser
+    description: "Get current user context information on a Poseidon callback"
+    mythic_command: getuser
+    timeout: 60
+
+  - name: sudo_macos
+    description: "(macOS only) Execute a command as root via macOS authorization on a Poseidon callback"
+    mythic_command: sudo
+    timeout: 120
+    parameters:
+      - name: command
+        type: string
+        description: "Command to execute as root"
+        required: true
+      - name: username
+        type: string
+        description: "Username for authentication"
+        default: ""
+      - name: password
+        type: string
+        description: "Password for authentication"
+        default: ""
+      - name: args
+        type: string
+        description: "Arguments (JSON array of strings)"
+        default: ""
+      - name: prompt_text
+        type: string
+        description: "Custom prompt text for macOS authorization dialog"
+        default: ""
+      - name: prompt_icon_path
+        type: string
+        description: "Path to icon for authorization prompt"
+        default: ""
+
+  - name: test_password_macos
+    description: "(macOS only) Test a user password via OpenDirectory on a Poseidon callback"
+    mythic_command: test_password
+    timeout: 60
+    parameters:
+      - name: username
+        type: string
+        description: "Username to test"
+        required: true
+      - name: password
+        type: string
+        description: "Password to test"
+        required: true
+
+  - name: sshauth
+    description: "Test SSH authentication against hosts on a Poseidon callback"
+    mythic_command: sshauth
+    timeout: 120
+    parameters:
+      - name: username
+        type: string
+        description: "SSH username"
+        required: true
+      - name: hosts
+        type: string
+        description: "JSON array of target hosts/CIDRs (e.g. [\"10.0.0.1/24\"])"
+        required: true
+      - name: port
+        type: integer
+        description: "SSH port"
+        default: 22
+      - name: password
+        type: string
+        description: "SSH password (use this or private_key)"
+        default: ""
+      - name: private_key
+        type: string
+        description: "SSH private key (use this or password)"
+        default: ""
+      - name: command
+        type: string
+        description: "Command to run after authentication"
+        default: ""
+      - name: source
+        type: string
+        description: "Source path for SCP"
+        default: ""
+      - name: destination
+        type: string
+        description: "Destination path for SCP"
+        default: ""
+
+  - name: prompt_macos
+    description: "(macOS only) Prompt user for credentials via macOS dialog on a Poseidon callback"
+    mythic_command: prompt
+    timeout: 120
+    parameters:
+      - name: title
+        type: string
+        description: "Dialog title"
+        default: "Updates available!"
+      - name: message
+        type: string
+        description: "Dialog message"
+        default: "Please authenticate to install the latest security update"
+      - name: icon
+        type: string
+        description: "Path to icon file"
+        default: ""
+      - name: max_tries
+        type: integer
+        description: "Maximum number of prompt attempts"
+        default: 5
+        min: 1
+
+  # =========================================================================
+  # Network Operations (5)
+  # =========================================================================
+
+  - name: ifconfig
+    description: "Get network interface information on a Poseidon callback"
+    mythic_command: ifconfig
+    timeout: 60
+
+  - name: portscan
+    description: "Scan hosts for open ports on a Poseidon callback"
+    mythic_command: portscan
+    timeout: 300
+    parameters:
+      - name: hosts
+        type: string
+        description: "JSON array of hosts/CIDRs to scan (e.g. [\"192.168.1.0/24\"])"
+        required: true
+      - name: ports
+        type: string
+        description: "JSON array of port ranges to scan (e.g. [\"80\", \"443\", \"1-1024\"])"
+        required: true
+
+  - name: curl
+    description: "Execute an HTTP request on a Poseidon callback"
+    mythic_command: curl
+    timeout: 120
+    parameters:
+      - name: url
+        type: string
+        description: "URL to request"
+        required: true
+      - name: method
+        type: string
+        description: "HTTP method"
+        default: "GET"
+        choices:
+          - "GET"
+          - "POST"
+          - "PUT"
+          - "DELETE"
+      - name: headers
+        type: string
+        description: "JSON array of headers (e.g. [{\"name\":\"Content-Type\",\"value\":\"application/json\"}])"
+        default: ""
+      - name: body
+        type: string
+        description: "Request body (base64-encoded)"
+        default: ""
+      - name: socketPath
+        type: string
+        description: "Unix socket path for request"
+        default: ""
+
+  - name: socks
+    description: "Start or stop a SOCKS5 proxy on a Poseidon callback"
+    mythic_command: socks
+    timeout: 60
+    parameters:
+      - name: action
+        type: string
+        description: "Proxy action"
+        required: true
+        choices:
+          - "start"
+          - "stop"
+          - "flush"
+      - name: port
+        type: integer
+        description: "SOCKS proxy port"
+        default: 7000
+      - name: username
+        type: string
+        description: "SOCKS username for authentication"
+        default: ""
+      - name: password
+        type: string
+        description: "SOCKS password for authentication"
+        default: ""
+
+  - name: rpfwd
+    description: "Start or stop a reverse port forward on a Poseidon callback"
+    mythic_command: rpfwd
+    timeout: 60
+    parameters:
+      - name: action
+        type: string
+        description: "Port forward action"
+        required: true
+        choices:
+          - "start"
+          - "stop"
+      - name: port
+        type: integer
+        description: "Local port to listen on"
+        default: 7000
+      - name: remote_ip
+        type: string
+        description: "Remote IP to forward to (required for start)"
+        default: ""
+      - name: remote_port
+        type: integer
+        description: "Remote port to forward to (required for start)"
+        default: 7000
+
+  # =========================================================================
+  # Persistence — macOS only (2)
+  # =========================================================================
+
+  - name: persist_launchd_macos
+    description: "(macOS only) Create launchd persistence on a Poseidon callback"
+    mythic_command: persist_launchd
+    timeout: 60
+    parameters:
+      - name: LaunchPath
+        type: string
+        description: "Path to binary to persist"
+        required: true
+      - name: Label
+        type: string
+        description: "Launchd plist label"
+        default: "com.apple.mdmupdateagent"
+      - name: KeepAlive
+        type: boolean
+        description: "Keep the process running"
+        default: true
+      - name: RunAtLoad
+        type: boolean
+        description: "Run at load time"
+        default: false
+      - name: args
+        type: string
+        description: "JSON array of arguments to the binary"
+        default: ""
+      - name: remove
+        type: boolean
+        description: "Remove existing persistence instead of creating"
+        default: false
+
+  - name: persist_loginitem_macos
+    description: "(macOS only) Add or manage login items on a Poseidon callback"
+    mythic_command: persist_loginitem
+    timeout: 60
+    parameters:
+      - name: path
+        type: string
+        description: "Path to application"
+        default: ""
+      - name: name
+        type: string
+        description: "Display name for login item"
+        default: ""
+      - name: global
+        type: boolean
+        description: "Add as global login item"
+        default: false
+      - name: list
+        type: boolean
+        description: "List existing login items"
+        default: false
+      - name: remove
+        type: boolean
+        description: "Remove login item"
+        default: false
+
+  # =========================================================================
+  # Code Injection & Execution (4)
+  # =========================================================================
+
+  - name: libinject_macos
+    description: "(macOS only) Inject a dylib into a running process on a Poseidon callback"
+    mythic_command: libinject
+    timeout: 120
+    parameters:
+      - name: pid
+        type: integer
+        description: "Target process ID"
+        required: true
+      - name: library
+        type: string
+        description: "Path to dylib to inject"
+        required: true
+
+  - name: execute_library_macos
+    description: "(macOS only) Load a dylib and execute a function on a Poseidon callback. Use file_id from core_upload_file for new files."
+    mythic_command: execute_library
+    timeout: 120
+    parameters:
+      - name: function_name
+        type: string
+        description: "Function name to call in the dylib"
+        required: true
+      - name: file_path
+        type: string
+        description: "Path to existing dylib on target (use this or file_id)"
+        default: ""
+      - name: file_id
+        type: string
+        description: "File UUID from core_upload_file for new dylib (use this or file_path)"
+        default: ""
+      - name: args
+        type: string
+        description: "JSON array of arguments to the function"
+        default: ""
+
+  - name: jsimport_macos
+    description: "(macOS only) Import a JXA script into agent memory on a Poseidon callback. Use file_id from core_upload_file."
+    mythic_command: jsimport
+    timeout: 60
+    parameters:
+      - name: file_id
+        type: string
+        description: "File UUID from core_upload_file containing the JXA script"
+        required: true
+
+  - name: jsimport_call_macos
+    description: "(macOS only) Execute JXA code from a previously imported script on a Poseidon callback"
+    mythic_command: jsimport_call
+    timeout: 120
+    parameters:
+      - name: code
+        type: string
+        description: "JXA code to execute (references functions from imported script)"
+        required: true
+
+  # =========================================================================
+  # Logging & Data Collection (4)
+  # =========================================================================
+
+  - name: keylog
+    description: "Start a keylogger on a Poseidon callback (Linux: requires root)"
+    mythic_command: keylog
+    timeout: 60
+
+  - name: screencapture_macos
+    description: "(macOS only) Capture a screenshot on a Poseidon callback"
+    mythic_command: screencapture
+    timeout: 60
+
+  - name: clipboard_macos
+    description: "(macOS only) Get clipboard contents on a Poseidon callback"
+    mythic_command: clipboard
+    timeout: 60
+    parameters:
+      - name: read
+        type: string
+        description: "JSON array of clipboard types to read (e.g. [\"public.utf8-plain-text\"])"
+        default: ""
+
+  - name: clipboard_monitor_macos
+    description: "(macOS only) Monitor clipboard for changes on a Poseidon callback"
+    mythic_command: clipboard_monitor
+    timeout: 60
+    parameters:
+      - name: duration
+        type: integer
+        description: "Duration in seconds to monitor (-1 for indefinite)"
+        default: -1
+
+  # =========================================================================
+  # System Information (8)
+  # =========================================================================
+
+  - name: drives
+    description: "List mounted drives on a Poseidon callback"
+    mythic_command: drives
+    timeout: 60
+
+  - name: lsopen_macos
+    description: "(macOS only) Open application via LaunchServices API on a Poseidon callback"
+    mythic_command: lsopen
+    timeout: 60
+    parameters:
+      - name: application
+        type: string
+        description: "Application name or path to open"
+        required: true
+      - name: hideApp
+        type: boolean
+        description: "Launch application hidden"
+        default: false
+      - name: appArgs
+        type: string
+        description: "JSON array of arguments to pass to the application"
+        default: ""
+
+  - name: list_entitlements_macos
+    description: "(macOS only) List entitlements for a process on a Poseidon callback"
+    mythic_command: list_entitlements
+    timeout: 60
+    parameters:
+      - name: pid
+        type: integer
+        description: "Process ID to inspect (-1 for current process)"
+        default: -1
+
+  - name: tcc_check_macos
+    description: "(macOS only) Check TCC (Transparency, Consent, Control) permissions on a Poseidon callback"
+    mythic_command: tcc_check
+    timeout: 60
+    parameters:
+      - name: user
+        type: string
+        description: "Username to check TCC permissions for (empty for current user)"
+        default: ""
+
+  - name: keys
+    description: "Interact with the Linux keyring on a Poseidon callback"
+    mythic_command: keys
+    timeout: 60
+    parameters:
+      - name: command
+        type: string
+        description: "Keyring command to execute"
+        required: true
+        choices:
+          - "dumpsession"
+          - "dumpuser"
+          - "dumpprocess"
+          - "dumpthreads"
+      - name: keyword
+        type: string
+        description: "Search keyword (for search operations)"
+        default: ""
+
+  - name: config
+    description: "View agent configuration and host info on a Poseidon callback"
+    mythic_command: config
+    timeout: 60
+
+  - name: print_c2
+    description: "Print C2 profile information on a Poseidon callback"
+    mythic_command: print_c2
+    timeout: 60
+
+  - name: print_p2p
+    description: "Print P2P connection information on a Poseidon callback"
+    mythic_command: print_p2p
+    timeout: 60
+
+  # =========================================================================
+  # Configuration & Control (8)
+  # =========================================================================
+
+  - name: sleep
+    description: "Change the callback interval and jitter on a Poseidon callback"
+    mythic_command: sleep
+    timeout: 60
+    parameters:
+      - name: interval
+        type: integer
+        description: "Sleep interval in seconds"
+        required: true
+        min: 0
+      - name: jitter
+        type: integer
+        description: "Jitter percentage (-1 for no change)"
+        default: -1
+
+  - name: update_c2
+    description: "Update C2 profile configuration on a Poseidon callback"
+    mythic_command: update_c2
+    timeout: 60
+    parameters:
+      - name: c2_name
+        type: string
+        description: "C2 profile name to update"
+        required: true
+      - name: action
+        type: string
+        description: "Action to perform"
+        default: "start"
+        choices:
+          - "start"
+          - "stop"
+      - name: config_name
+        type: string
+        description: "Configuration key to update"
+        default: ""
+      - name: config_value
+        type: string
+        description: "New configuration value"
+        default: ""
+
+  - name: link_tcp
+    description: "Link to an agent via TCP P2P on a Poseidon callback"
+    mythic_command: link_tcp
+    timeout: 60
+    parameters:
+      - name: address
+        type: string
+        description: "Target address to connect to"
+        required: true
+      - name: port
+        type: integer
+        description: "Target port to connect to"
+        required: true
+
+  - name: unlink_tcp
+    description: "Unlink a TCP P2P connection on a Poseidon callback"
+    mythic_command: unlink_tcp
+    timeout: 60
+    parameters:
+      - name: connectionUUID
+        type: string
+        description: "UUID of the connection to unlink"
+        required: true
+
+  - name: link_webshell
+    description: "Link to an agent via webshell P2P on a Poseidon callback"
+    mythic_command: link_webshell
+    timeout: 60
+    parameters:
+      - name: address
+        type: string
+        description: "Webshell URL to connect to"
+        required: true
+
+  - name: unlink_webshell
+    description: "Unlink a webshell P2P connection on a Poseidon callback"
+    mythic_command: unlink_webshell
+    timeout: 60
+    parameters:
+      - name: connectionUUID
+        type: string
+        description: "UUID of the connection to unlink"
+        required: true
+
+  - name: exit
+    description: "Exit the agent and kill the session on a Poseidon callback"
+    mythic_command: exit
+    timeout: 60
+
+  - name: caffeinate_macos
+    description: "(macOS only) Prevent system sleep on a Poseidon callback"
+    mythic_command: caffeinate
+    timeout: 60
+    parameters:
+      - name: enable
+        type: boolean
+        description: "Enable or disable caffeinate"
+        default: false
+
+  # =========================================================================
+  # XPC — macOS only (7)
+  # =========================================================================
+
+  - name: xpc_send_macos
+    description: "(macOS only) Send data to an XPC service on a Poseidon callback"
+    mythic_command: xpc_send
+    timeout: 60
+    parameters:
+      - name: servicename
+        type: string
+        description: "XPC service name"
+        required: true
+      - name: data
+        type: string
+        description: "Base64-encoded JSON data to send"
+        default: ""
+
+  - name: xpc_service_macos
+    description: "(macOS only) List or manage XPC services on a Poseidon callback"
+    mythic_command: xpc_service
+    timeout: 60
+    parameters:
+      - name: servicename
+        type: string
+        description: "XPC service name (required for most operations)"
+        default: ""
+      - name: list
+        type: boolean
+        description: "List XPC services"
+        default: true
+      - name: start
+        type: boolean
+        description: "Start service"
+        default: false
+      - name: stop
+        type: boolean
+        description: "Stop service"
+        default: false
+      - name: enable
+        type: boolean
+        description: "Enable service"
+        default: false
+      - name: disable
+        type: boolean
+        description: "Disable service"
+        default: false
+      - name: remove
+        type: boolean
+        description: "Remove service"
+        default: false
+      - name: dumpstate
+        type: boolean
+        description: "Dump service state"
+        default: false
+
+  - name: xpc_submit_macos
+    description: "(macOS only) Submit a command to an XPC service on a Poseidon callback"
+    mythic_command: xpc_submit
+    timeout: 60
+    parameters:
+      - name: servicename
+        type: string
+        description: "XPC service name"
+        required: true
+      - name: program
+        type: string
+        description: "Program path to submit"
+        required: true
+
+  - name: xpc_procinfo_macos
+    description: "(macOS only) Get process info via XPC on a Poseidon callback"
+    mythic_command: xpc_procinfo
+    timeout: 60
+    parameters:
+      - name: pid
+        type: integer
+        description: "Process ID to inspect (0 for all)"
+        default: 0
+
+  - name: xpc_manageruid_macos
+    description: "(macOS only) Get current user UID via XPC manager on a Poseidon callback"
+    mythic_command: xpc_manageruid
+    timeout: 60
+
+  - name: xpc_unload_macos
+    description: "(macOS only) Unload a launch agent or daemon via XPC on a Poseidon callback"
+    mythic_command: xpc_unload
+    timeout: 60
+    parameters:
+      - name: file
+        type: string
+        description: "Path to plist file to unload"
+        required: true
+
+  - name: xpc_load_macos
+    description: "(macOS only) Load a launch agent or daemon via XPC on a Poseidon callback"
+    mythic_command: xpc_load
+    timeout: 60
+    parameters:
+      - name: file
+        type: string
+        description: "Path to plist file to load"
+        required: true
+
+  # =========================================================================
+  # Shell Configuration (2)
+  # =========================================================================
+
+  - name: shell_config
+    description: "Configure shell command behavior on a Poseidon callback"
+    mythic_command: shell_config
+    timeout: 60
+    parameters:
+      - name: shell
+        type: string
+        description: "Path to shell binary"
+        default: "/bin/bash"
+
+  - name: chmod
+    description: "Change file permissions on a Poseidon callback"
+    mythic_command: chmod
+    timeout: 60
+    parameters:
+      - name: path
+        type: string
+        description: "Path to file"
+        required: true
+      - name: mode
+        type: string
+        description: "Permission mode (e.g. 755, 644)"
+        required: true

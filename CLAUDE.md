@@ -66,6 +66,7 @@ Features are developed on branches named `feature/<name>`. Artifacts are stored 
 - Python 3.10+ + mcp>=1.26.0, mythic>=0.2.10, pydantic>=2.0.0, pyyaml>=6.0.0 (006-yaml-plugin-config)
 - N/A (stateless — config files read at startup) (006-yaml-plugin-config)
 - N/A (stateless — YAML config files read at startup) (007-apollo-full-coverage)
+- Python 3.10+ + mcp>=1.26.0, mythic>=0.2.10, pydantic>=2.0.0, pyyaml>=6.0.0 + Existing YAML loader (`yaml_loader.py`), plugin base classes, executor (008-poseidon-plugin)
 
 ## Installation
 
@@ -96,7 +97,7 @@ except ExceptionGroup as eg:
 ## Plugin System
 
 The plugin system allows agent-specific tools to be loaded dynamically. Plugins can be defined via YAML configuration files (preferred) or Python code (for advanced use cases). Plugins are located in:
-- `src/mythicmcp/plugins/builtin/` - Bundled plugins (Apollo via YAML, Arachne via Python)
+- `src/mythicmcp/plugins/builtin/` - Bundled plugins (Apollo, Poseidon, Arachne via YAML)
 - External directory via `MYTHICMCP_PLUGINS_DIR` environment variable
 
 YAML configs are loaded first, then Python modules. If both define the same agent name, the YAML version takes precedence.
@@ -172,7 +173,8 @@ class MyAgentPlugin(AgentPlugin):
 ### Available Plugins
 
 - **Apollo** (78 tools, YAML-defined): Full coverage of Apollo 2.4.8 — shell, powershell, powerpick, ls, cat, download, upload, execute_assembly, mimikatz, and 69 more
-- **Arachne** (8 tools, Python-defined): shell, pwd, ls, cd, rm, download, upload, execute_assembly
+- **Poseidon** (74 tools, YAML-defined): Full coverage of Poseidon 2.2.8 (macOS/Linux) — shell, pty, run, ls, cat, download, upload, curl, portscan, sshauth, XPC, and 63 more
+- **Arachne** (8 tools, YAML-defined): shell, pwd, ls, cd, rm, download, upload, execute_assembly
 
 ## Core Tools
 
@@ -198,6 +200,6 @@ The MCP server exposes these core tools for Mythic operations:
 - `core_list_uploaded_files` - List files uploaded to Mythic
 
 ## Recent Changes
+- 008-poseidon-plugin: Added Python 3.10+ + mcp>=1.26.0, mythic>=0.2.10, pydantic>=2.0.0, pyyaml>=6.0.0 + Existing YAML loader (`yaml_loader.py`), plugin base classes, executor
 - 007-apollo-full-coverage: Added Python 3.10+ + mcp>=1.26.0, mythic>=0.2.10, pydantic>=2.0.0, pyyaml>=6.0.0
 - 006-yaml-plugin-config: YAML-driven plugin config system. apollo.yaml replaces apollo.py, new yaml_loader.py module, pyyaml added to main dependencies. Plugins can now be defined via YAML without writing Python code.
-- 005-integration-testing: Added Python 3.10+ + pytest, pytest-asyncio, pyyaml, pydantic, mythic (0.2.10+)

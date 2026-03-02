@@ -50,6 +50,18 @@ agents:
     build_parameters: []
     description: "Arachne test payload for Linux targets"
 
+  - name: "poseidon"
+    payload_type: "poseidon"
+    os: "Linux"
+    filename: "poseidon_test"
+    c2_profiles:
+      - c2_profile: "http"
+        c2_profile_parameters:
+          callback_host: "https://10.5.10.10"
+          callback_port: 443
+    build_parameters: []
+    description: "Poseidon test payload for Linux targets"
+
 # Target systems — each must have a pre-existing callback for file operations
 targets:
   - name: "windows-target"
@@ -67,6 +79,14 @@ targets:
     upload_path: "/tmp/test_payload"
     agents:
       - "arachne"
+
+  - name: "linux-target-poseidon"
+    hostname: "debian-vm"
+    os: "Linux"
+    callback_id: 3
+    upload_path: "/tmp/test_payload"
+    agents:
+      - "poseidon"
 
 # Test commands to run on verified callbacks, keyed by agent name.
 # Each command specifies the agent command, parameters, and expected output.
@@ -291,3 +311,206 @@ test_commands:
       parameters: {}
       expected_output: "/"
       timeout: 60
+
+  poseidon:
+    # =======================================================================
+    # Shell & Command Execution
+    # =======================================================================
+    - command: "shell"
+      parameters: "id"
+      expected_output: "uid="
+      timeout: 60
+    - command: "run"
+      parameters:
+        path: "/usr/bin/uname"
+        args:
+          - "-a"
+      expected_output: "Linux"
+      timeout: 60
+
+    # =======================================================================
+    # File Operations — sequenced: pwd → cd → ls → mkdir → upload → cat →
+    #   head → tail → triagedirectory → chmod → cp → mv →
+    #   download → download_bulk → rm
+    # =======================================================================
+    - command: "pwd"
+      parameters: {}
+      expected_output: "/"
+      timeout: 60
+    - command: "cd"
+      parameters: "/tmp"
+      expected_output: ""
+      timeout: 30
+    - command: "ls"
+      parameters:
+        path: "/tmp"
+      expected_output: ""
+      timeout: 60
+    - command: "mkdir"
+      parameters: "/tmp/mcp_test"
+      expected_output: ""
+      timeout: 30
+    - command: "upload"
+      parameters:
+        file_id: "REPLACE_WITH_FILE_ID"
+        remote_path: "/tmp/mcp_test/test.txt"
+      expected_output: ""
+      timeout: 120
+    - command: "cat"
+      parameters: "/tmp/mcp_test/test.txt"
+      expected_output: "MythicMCP-test-fixture"
+      timeout: 60
+    - command: "head"
+      parameters:
+        path: "/tmp/mcp_test/test.txt"
+        lines: 5
+      expected_output: ""
+      timeout: 60
+    - command: "tail"
+      parameters:
+        path: "/tmp/mcp_test/test.txt"
+        lines: 5
+      expected_output: ""
+      timeout: 60
+    - command: "triagedirectory"
+      parameters: "/tmp/mcp_test"
+      expected_output: ""
+      timeout: 60
+    - command: "chmod"
+      parameters:
+        path: "/tmp/mcp_test/test.txt"
+        mode: "644"
+      expected_output: ""
+      timeout: 30
+    - command: "cp"
+      parameters:
+        source: "/tmp/mcp_test/test.txt"
+        destination: "/tmp/mcp_test/test_copy.txt"
+      expected_output: ""
+      timeout: 60
+    - command: "mv"
+      parameters:
+        source: "/tmp/mcp_test/test_copy.txt"
+        destination: "/tmp/mcp_test/test_moved.txt"
+      expected_output: ""
+      timeout: 60
+    - command: "download"
+      parameters: "/tmp/mcp_test/test.txt"
+      expected_output: ""
+      timeout: 120
+    - command: "download_bulk"
+      parameters:
+        paths:
+          - "/tmp/mcp_test/test.txt"
+      expected_output: ""
+      timeout: 120
+    - command: "rm"
+      parameters: "/tmp/mcp_test/test_moved.txt"
+      expected_output: ""
+      timeout: 30
+    - command: "rm"
+      parameters: "/tmp/mcp_test/test.txt"
+      expected_output: ""
+      timeout: 30
+
+    # =======================================================================
+    # Process & Jobs
+    # =======================================================================
+    - command: "ps"
+      parameters: {}
+      expected_output: ""
+      timeout: 60
+    - command: "jobs"
+      parameters: {}
+      expected_output: ""
+      timeout: 30
+
+    # =======================================================================
+    # Environment & System Info
+    # =======================================================================
+    - command: "getenv"
+      parameters: {}
+      expected_output: "PATH"
+      timeout: 30
+    - command: "setenv"
+      parameters: "MCPTEST testvalue"
+      expected_output: ""
+      timeout: 30
+    - command: "getenv"
+      parameters: {}
+      expected_output: "MCPTEST"
+      timeout: 30
+    - command: "unsetenv"
+      parameters: "MCPTEST"
+      expected_output: ""
+      timeout: 30
+    - command: "getuser"
+      parameters: {}
+      expected_output: ""
+      timeout: 30
+    - command: "ifconfig"
+      parameters: {}
+      expected_output: ""
+      timeout: 30
+    - command: "config"
+      parameters: {}
+      expected_output: ""
+      timeout: 30
+    - command: "drives"
+      parameters: {}
+      expected_output: ""
+      timeout: 30
+    - command: "keys"
+      parameters:
+        command: "dumpsession"
+      expected_output: ""
+      timeout: 30
+
+    # =======================================================================
+    # Curl (HTTP request tests against Mythic server)
+    # =======================================================================
+    - command: "curl"
+      parameters:
+        url: "https://10.5.10.10:443"
+        method: "GET"
+      expected_output: ""
+      timeout: 60
+    - command: "curl_env_set"
+      parameters:
+        setEnv:
+          - "TESTVAR=testvalue"
+      expected_output: ""
+      timeout: 30
+    - command: "curl_env_get"
+      parameters: {}
+      expected_output: "TESTVAR"
+      timeout: 30
+    - command: "curl_env_clear"
+      parameters:
+        clearEnv:
+          - "TESTVAR"
+      expected_output: ""
+      timeout: 30
+
+    # =======================================================================
+    # Configuration & Control
+    # =======================================================================
+    - command: "print_c2"
+      parameters: {}
+      expected_output: ""
+      timeout: 30
+    - command: "print_p2p"
+      parameters: {}
+      expected_output: ""
+      timeout: 30
+    - command: "shell_config"
+      parameters:
+        shell: "/bin/bash"
+      expected_output: ""
+      timeout: 30
+    - command: "sleep"
+      parameters:
+        interval: 1
+        jitter: 0
+      expected_output: ""
+      timeout: 30

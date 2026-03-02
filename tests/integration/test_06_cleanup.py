@@ -20,6 +20,7 @@ pytestmark = pytest.mark.integration
 # Directories created during file-op tests that need removal
 TEST_DIRECTORIES = {
     "Windows": [r"C:\Users\Public\mcp_test"],
+    "Linux": ["/tmp/mcp_test"],
 }
 
 
@@ -32,7 +33,7 @@ class TestCleanup:
             for agent_name in target.agents:
                 # Cleanup is best-effort — don't skip if earlier phases failed,
                 # but warn if cleanup itself fails (per FR-020).
-                success = await cleanup_payload_on_target(mythic_instance, target)
+                success = await cleanup_payload_on_target(mythic_instance, target, agent_name)
                 if not success:
                     warnings.warn(
                         f"Payload cleanup failed for {agent_name}/{target.name}",
@@ -56,6 +57,7 @@ class TestCleanup:
                         callback_id,
                         dir_path,
                         os_type=target.os,
+                        agent_name=agent_name,
                     )
                     if not success:
                         warnings.warn(
