@@ -72,4 +72,20 @@ async def mythic_instance(integration_config: IntegrationTestConfig):
     except Exception as e:
         pytest.skip(f"Mythic server unreachable: {e}")
 
+    # Ensure a current operation is set (login may return operation_id=0)
+    if not instance.current_operation_id:
+        try:
+            ops = await mythic.execute_custom_query(
+                mythic=instance,
+                query="query GetOperations { operation { id name } }",
+                variables={},
+            )
+            operations = ops.get("operation", [])
+            if operations:
+                instance.current_operation_id = operations[0]["id"]
+            else:
+                pytest.skip("No operations available on Mythic server")
+        except Exception as e:
+            pytest.skip(f"Failed to set operation: {e}")
+
     return instance
