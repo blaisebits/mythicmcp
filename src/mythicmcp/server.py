@@ -14,15 +14,22 @@ from mythicmcp.connection import mythic_lifespan
 from mythicmcp.models import (
     CheckConnectionErrorResponse,
     CheckConnectionResponse,
+    CreatePayloadErrorResponse,
+    CreatePayloadResponse,
     DownloadFileErrorResponse,
     DownloadFileResponse,
+    DownloadPayloadErrorResponse,
+    DownloadPayloadResponse,
     GetCallbackResponse,
     GetOperationResponse,
+    GetPayloadResponse,
     ListCallbacksResponse,
     ListDownloadedFilesResponse,
     ListOperationsResponse,
+    ListPayloadsResponse,
     ListPluginsResponse,
     ListUploadedFilesResponse,
+    PayloadConfigCheckResponse,
     PluginInfo,
     PluginLoadErrorInfo,
     SetOperationResponse,
@@ -250,6 +257,127 @@ async def core_list_uploaded_files(ctx: Context) -> ListUploadedFilesResponse:
     from mythicmcp.tools.files import core_list_uploaded_files as impl
 
     return await impl(ctx)
+
+
+# --- Payload Tools ---
+
+
+@mcp.tool()
+async def core_list_payloads(ctx: Context) -> ListPayloadsResponse:
+    """List all payloads in the current Mythic operation.
+
+    Returns UUID, agent type, build status, OS, description, and C2 profiles
+    for each payload. Includes auto-generated and deleted payloads with metadata flags.
+    """
+    from mythicmcp.tools.payloads import core_list_payloads as impl
+
+    return await impl(ctx)
+
+
+@mcp.tool()
+async def core_get_payload(ctx: Context, payload_uuid: str) -> GetPayloadResponse:
+    """Get detailed information about a specific Mythic payload by UUID.
+
+    Returns build phase, build messages, operator, file metadata, C2 profile details,
+    and other configuration for the specified payload.
+
+    Args:
+        payload_uuid: UUID of the payload to retrieve
+    """
+    from mythicmcp.tools.payloads import core_get_payload as impl
+
+    return await impl(ctx, payload_uuid)
+
+
+@mcp.tool()
+async def core_create_payload(
+    ctx: Context,
+    payload_type_name: str,
+    filename: str,
+    operating_system: str,
+    c2_profiles: str,
+    description: str = "",
+    commands: str = "",
+    build_parameters: str = "",
+    include_all_commands: bool = False,
+    timeout: int = 300,
+) -> CreatePayloadResponse | CreatePayloadErrorResponse:
+    """Create and build a new standard payload on the Mythic server.
+
+    Waits for the build to complete and returns the result. Wrapper payloads
+    are not supported — use the Mythic UI for those.
+
+    Args:
+        payload_type_name: Agent type (e.g., "apollo", "poseidon")
+        filename: Output filename for the payload
+        operating_system: Target OS (e.g., "Windows", "Linux", "macOS")
+        c2_profiles: JSON array of C2 profile configs, e.g. [{"c2_profile": "http", "c2_profile_parameters": {"callback_host": "https://..."}}]
+        description: Payload description (optional)
+        commands: JSON array of command names to include (optional)
+        build_parameters: JSON array of build params [{"name": "...", "value": "..."}] (optional)
+        include_all_commands: Include all commands for the agent type (optional, default false)
+        timeout: Build timeout in seconds, 30-600 (optional, default 300)
+    """
+    from mythicmcp.tools.payloads import core_create_payload as impl
+
+    return await impl(
+        ctx, payload_type_name, filename, operating_system, c2_profiles,
+        description, commands, build_parameters, include_all_commands, timeout,
+    )
+
+
+@mcp.tool()
+async def core_download_payload(
+    ctx: Context,
+    payload_uuid: str,
+) -> DownloadPayloadResponse | DownloadPayloadErrorResponse:
+    """Download a built payload binary from the Mythic server by UUID.
+
+    Returns the payload content as base64-encoded string along with filename
+    and size metadata. The payload must have built successfully.
+
+    Args:
+        payload_uuid: UUID of the payload to download
+    """
+    from mythicmcp.tools.payloads import core_download_payload as impl
+
+    return await impl(ctx, payload_uuid)
+
+
+@mcp.tool()
+async def core_check_payload_config(
+    ctx: Context,
+    payload_uuid: str,
+) -> PayloadConfigCheckResponse:
+    """Validate a payload's C2 configuration against running C2 profiles.
+
+    Checks whether the payload's C2 settings are compatible with the active
+    C2 profile configuration on the Mythic server.
+
+    Args:
+        payload_uuid: UUID of the payload to check
+    """
+    from mythicmcp.tools.payloads import core_check_payload_config as impl
+
+    return await impl(ctx, payload_uuid)
+
+
+@mcp.tool()
+async def core_payload_redirect_rules(
+    ctx: Context,
+    payload_uuid: str,
+) -> PayloadConfigCheckResponse:
+    """Get redirect rules for a payload's C2 configuration.
+
+    Returns the redirect/redirector rules that should be configured for the
+    payload's C2 profile to properly route traffic.
+
+    Args:
+        payload_uuid: UUID of the payload to get rules for
+    """
+    from mythicmcp.tools.payloads import core_payload_redirect_rules as impl
+
+    return await impl(ctx, payload_uuid)
 
 
 CONFIGURATION_GUIDANCE = """

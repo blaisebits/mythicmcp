@@ -394,3 +394,143 @@ class ListUploadedFilesResponse(BaseModel):
         default_factory=utc_now,
         description="Timestamp of query (ISO 8601 UTC)",
     )
+
+
+# --- Payload Models ---
+
+
+class C2ProfileSummary(BaseModel):
+    """Summary of a C2 profile associated with a payload."""
+
+    name: str = Field(description="Profile name (e.g., 'http')")
+    is_p2p: bool = Field(description="Whether this is a P2P profile")
+    running: bool = Field(description="Whether the profile container is running")
+
+
+class PayloadSummary(BaseModel):
+    """Summary view of a Mythic payload for list operations."""
+
+    uuid: str = Field(description="Payload UUID (primary identifier)")
+    agent_type: str = Field(description="Payload type name (e.g., 'apollo')")
+    build_phase: str = Field(description="Build status: 'building', 'success', 'error'")
+    description: str = Field(default="", description="Operator-provided description")
+    deleted: bool = Field(description="Whether payload has been deleted")
+    auto_generated: bool = Field(description="Whether Mythic auto-generated this payload")
+    creation_time: datetime = Field(description="When payload was created")
+    os: str = Field(default="", description="Target operating system")
+    c2_profiles: list[C2ProfileSummary] = Field(
+        default_factory=list, description="Associated C2 profiles"
+    )
+
+
+class PayloadDetail(BaseModel):
+    """Detailed view of a Mythic payload."""
+
+    uuid: str = Field(description="Payload UUID")
+    agent_type: str = Field(description="Payload type name")
+    build_phase: str = Field(description="Build status")
+    build_message: str = Field(default="", description="Build output message")
+    build_stderr: str = Field(default="", description="Build stderr output")
+    callback_alert: bool = Field(default=False, description="Whether callback alerts enabled")
+    description: str = Field(default="", description="Operator-provided description")
+    deleted: bool = Field(description="Whether payload has been deleted")
+    auto_generated: bool = Field(description="Whether auto-generated")
+    creation_time: datetime = Field(description="When payload was created")
+    operator: str = Field(default="", description="Who created it")
+    file_uuid: Optional[str] = Field(default=None, description="File UUID for download")
+    filename: Optional[str] = Field(default=None, description="Built filename")
+    os: str = Field(default="", description="Target operating system")
+    c2_profiles: list[C2ProfileSummary] = Field(
+        default_factory=list, description="Associated C2 profiles"
+    )
+
+
+class ListPayloadsResponse(BaseModel):
+    """Response for core_list_payloads tool."""
+
+    payloads: list[PayloadSummary] = Field(description="List of payloads")
+    count: int = Field(description="Total number of payloads")
+    retrieved_at: datetime = Field(
+        default_factory=utc_now,
+        description="Timestamp when data was retrieved (ISO 8601 UTC)",
+    )
+
+
+class GetPayloadResponse(BaseModel):
+    """Response for core_get_payload tool."""
+
+    payload: PayloadDetail = Field(description="Payload details")
+    retrieved_at: datetime = Field(
+        default_factory=utc_now,
+        description="Timestamp when data was retrieved (ISO 8601 UTC)",
+    )
+
+
+class CreatePayloadResponse(BaseModel):
+    """Response for core_create_payload tool (success case)."""
+
+    success: bool = Field(default=True, description="Whether build succeeded")
+    uuid: str = Field(description="Payload UUID")
+    build_phase: str = Field(description="Terminal build status")
+    build_message: str = Field(default="", description="Build output message")
+    retrieved_at: datetime = Field(
+        default_factory=utc_now,
+        description="Timestamp of operation (ISO 8601 UTC)",
+    )
+
+
+class CreatePayloadErrorResponse(BaseModel):
+    """Response for core_create_payload tool (error case)."""
+
+    success: bool = Field(default=False, description="Always false for errors")
+    error: str = Field(description="Error message")
+    error_type: str = Field(
+        description="Error category: no_operation, build_failed, connection_error, timeout, invalid_input"
+    )
+    uuid: Optional[str] = Field(default=None, description="Payload UUID if available")
+    retrieved_at: datetime = Field(
+        default_factory=utc_now,
+        description="Timestamp of operation (ISO 8601 UTC)",
+    )
+
+
+class DownloadPayloadResponse(BaseModel):
+    """Response for core_download_payload tool (success case)."""
+
+    success: bool = Field(default=True, description="Whether download succeeded")
+    payload_uuid: str = Field(description="Payload UUID")
+    filename: str = Field(description="Payload filename")
+    content: str = Field(description="Base64-encoded payload binary")
+    size_bytes: int = Field(description="File size in bytes (before encoding)")
+    retrieved_at: datetime = Field(
+        default_factory=utc_now,
+        description="Timestamp of operation (ISO 8601 UTC)",
+    )
+
+
+class DownloadPayloadErrorResponse(BaseModel):
+    """Response for core_download_payload tool (error case)."""
+
+    success: bool = Field(default=False, description="Always false for errors")
+    error: str = Field(description="Error message")
+    error_type: str = Field(
+        description="Error category: not_found, build_incomplete, connection_error, no_operation"
+    )
+    payload_uuid: str = Field(description="Requested payload UUID")
+    retrieved_at: datetime = Field(
+        default_factory=utc_now,
+        description="Timestamp of operation (ISO 8601 UTC)",
+    )
+
+
+class PayloadConfigCheckResponse(BaseModel):
+    """Response for core_check_payload_config and core_payload_redirect_rules tools."""
+
+    payload_uuid: str = Field(description="Payload UUID")
+    status: str = Field(description="Check result: 'success' or 'error'")
+    error: str = Field(default="", description="Error message if status is error")
+    output: str = Field(default="", description="Result output text")
+    retrieved_at: datetime = Field(
+        default_factory=utc_now,
+        description="Timestamp of operation (ISO 8601 UTC)",
+    )
