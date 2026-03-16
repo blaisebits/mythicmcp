@@ -494,6 +494,32 @@ class CreatePayloadErrorResponse(BaseModel):
     )
 
 
+class DeletePayloadResponse(BaseModel):
+    """Response for core_delete_payload tool (success case)."""
+
+    success: bool = Field(default=True, description="Whether delete succeeded")
+    payload_uuid: str = Field(description="Payload UUID")
+    retrieved_at: datetime = Field(
+        default_factory=utc_now,
+        description="Timestamp of operation (ISO 8601 UTC)",
+    )
+
+
+class DeletePayloadErrorResponse(BaseModel):
+    """Response for core_delete_payload tool (error case)."""
+
+    success: bool = Field(default=False, description="Always false for errors")
+    error: str = Field(description="Error message")
+    error_type: str = Field(
+        description="Error category: not_found, no_operation, connection_error"
+    )
+    payload_uuid: str = Field(description="Requested payload UUID")
+    retrieved_at: datetime = Field(
+        default_factory=utc_now,
+        description="Timestamp of operation (ISO 8601 UTC)",
+    )
+
+
 class DownloadPayloadResponse(BaseModel):
     """Response for core_download_payload tool (success case)."""
 

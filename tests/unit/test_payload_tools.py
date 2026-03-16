@@ -17,6 +17,7 @@ PAYLOAD_TOOLS = {
     "core_list_payloads",
     "core_get_payload",
     "core_create_payload",
+    "core_delete_payload",
     "core_download_payload",
     "core_check_payload_config",
     "core_payload_redirect_rules",
@@ -93,6 +94,22 @@ class TestCoreCreatePayloadTool:
 
         tool = mcp._tool_manager._tools.get("core_create_payload")
         assert "build" in tool.description.lower()
+
+
+class TestCoreDeletePayloadTool:
+    """Test core_delete_payload tool configuration."""
+
+    def test_tool_exists(self):
+        from mythicmcp.server import mcp
+
+        tool = mcp._tool_manager._tools.get("core_delete_payload")
+        assert tool is not None
+
+    def test_tool_description_mentions_delete(self):
+        from mythicmcp.server import mcp
+
+        tool = mcp._tool_manager._tools.get("core_delete_payload")
+        assert "delete" in tool.description.lower()
 
 
 class TestCoreDownloadPayloadTool:
@@ -239,6 +256,23 @@ class TestPayloadModels:
             error="Timeout", error_type="timeout", uuid="abc-123"
         )
         assert error_with_uuid.uuid == "abc-123"
+
+    def test_delete_payload_response(self):
+        from mythicmcp.models import DeletePayloadResponse
+
+        response = DeletePayloadResponse(payload_uuid="uuid-123")
+        assert response.success is True
+        assert response.payload_uuid == "uuid-123"
+        assert response.retrieved_at is not None
+
+    def test_delete_payload_error_response(self):
+        from mythicmcp.models import DeletePayloadErrorResponse
+
+        response = DeletePayloadErrorResponse(
+            error="Not found", error_type="not_found", payload_uuid="uuid-123"
+        )
+        assert response.success is False
+        assert response.error_type == "not_found"
 
     def test_download_payload_response(self):
         from mythicmcp.models import DownloadPayloadResponse

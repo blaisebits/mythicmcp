@@ -231,6 +231,40 @@ class TestPayloadRedirectRules:
         assert result.retrieved_at is not None
 
 
+class TestDeletePayload:
+    """Test core_delete_payload business logic."""
+
+    async def test_delete_payload_success(self, mythic_instance):
+        """Delete the created payload and verify success."""
+        if not _created_payload_uuid:
+            pytest.skip("No payload created in previous test")
+
+        from mythicmcp.tools.payloads import delete_payload
+
+        result = await delete_payload(mythic_instance, _created_payload_uuid)
+
+        assert result.success is True
+        assert result.payload_uuid == _created_payload_uuid
+        assert result.retrieved_at is not None
+
+    async def test_deleted_payload_shows_deleted_flag(self, mythic_instance):
+        """After deletion, get_payload should show deleted=True."""
+        if not _created_payload_uuid:
+            pytest.skip("No payload created in previous test")
+
+        from mythicmcp.tools.payloads import get_payload_by_uuid
+
+        result = await get_payload_by_uuid(mythic_instance, _created_payload_uuid)
+        assert result.payload.deleted is True
+
+    async def test_delete_payload_invalid_uuid(self, mythic_instance):
+        """Delete with nonexistent UUID should raise an error."""
+        from mythicmcp.tools.payloads import delete_payload
+
+        with pytest.raises(Exception):
+            await delete_payload(mythic_instance, "00000000-0000-0000-0000-000000000000")
+
+
 class TestListPayloadsAfterCreate:
     """Verify list includes the created payload."""
 

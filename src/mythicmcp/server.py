@@ -16,6 +16,8 @@ from mythicmcp.models import (
     CheckConnectionResponse,
     CreatePayloadErrorResponse,
     CreatePayloadResponse,
+    DeletePayloadErrorResponse,
+    DeletePayloadResponse,
     DownloadFileErrorResponse,
     DownloadFileResponse,
     DownloadPayloadErrorResponse,
@@ -340,6 +342,23 @@ async def core_download_payload(
         payload_uuid: UUID of the payload to download
     """
     from mythicmcp.tools.payloads import core_download_payload as impl
+
+    return await impl(ctx, payload_uuid)
+
+
+@mcp.tool()
+async def core_delete_payload(
+    ctx: Context,
+    payload_uuid: str,
+) -> DeletePayloadResponse | DeletePayloadErrorResponse:
+    """Soft-delete a payload from the current Mythic operation.
+
+    Marks the payload as deleted. This is reversible through the Mythic UI.
+
+    Args:
+        payload_uuid: UUID of the payload to delete
+    """
+    from mythicmcp.tools.payloads import core_delete_payload as impl
 
     return await impl(ctx, payload_uuid)
 

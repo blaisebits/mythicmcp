@@ -23,6 +23,8 @@ from mythicmcp.models import (
     C2ProfileSummary,
     CreatePayloadErrorResponse,
     CreatePayloadResponse,
+    DeletePayloadErrorResponse,
+    DeletePayloadResponse,
     DownloadPayloadErrorResponse,
     DownloadPayloadResponse,
     GetPayloadResponse,
@@ -558,6 +560,61 @@ async def payload_redirect_rules(
         raise ConnectionError(f"Failed to get redirect rules: {e}")
 
 
+DELETE_PAYLOAD_MUTATION = """
+mutation PayloadsDeletePayloadMutation($payload_uuid: String!) {
+  updatePayload(payload_uuid: $payload_uuid, deleted: true) {
+    status
+    error
+    id
+  }
+}
+"""
+
+
+async def delete_payload(
+    mythic_instance: mythic_classes.Mythic,
+    payload_uuid: str,
+) -> DeletePayloadResponse:
+    """Soft-delete a payload by UUID (sets deleted flag to true)."""
+    from mythic import mythic
+
+    if not mythic_instance.current_operation_id:
+        raise NoOperationError()
+
+    if not payload_uuid or not payload_uuid.strip():
+        raise PayloadNotFoundError(payload_uuid)
+
+    try:
+        result = await mythic.execute_custom_query(
+            mythic=mythic_instance,
+            query=DELETE_PAYLOAD_MUTATION,
+            variables={"payload_uuid": payload_uuid},
+        )
+
+        update_result = result.get("updatePayload", {})
+        status = update_result.get("status", "")
+        error = update_result.get("error", "")
+
+        if status != "success":
+            raise PayloadError(f"Delete failed: {error or 'unknown error'}")
+
+        return DeletePayloadResponse(payload_uuid=payload_uuid)
+
+    except PayloadNotFoundError:
+        raise
+    except NoOperationError:
+        raise
+    except PayloadError:
+        raise
+    except Exception as e:
+        error_msg = str(e).lower()
+        if "failed to find" in error_msg or "not found" in error_msg:
+            raise PayloadNotFoundError(payload_uuid)
+        if "connection" in error_msg or "timeout" in error_msg:
+            raise ConnectionError(str(e))
+        raise ConnectionError(f"Failed to delete payload: {e}")
+
+
 # --- Tool Entry Points ---
 
 
@@ -793,3 +850,44 @@ async def core_payload_redirect_rules(
     except Exception as e:
         logger.exception("Unexpected error in core_payload_redirect_rules")
         raise McpError(ErrorData(code=-1, message=f"Unexpected error: {type(e).__name__}"))
+
+
+async def core_delete_payload(
+    ctx: Context,
+    payload_uuid: str,
+) -> DeletePayloadResponse | DeletePayloadErrorResponse:
+    """Soft-delete a payload from the current Mythic operation.
+
+    Marks the payload as deleted. This is reversible through the Mythic UI.
+
+    Args:
+        payload_uuid: UUID of the payload to delete
+    """
+    mythic_ctx: MythicContext = ctx.request_context.lifespan_context
+
+    try:
+        return await delete_payload(mythic_ctx.mythic, payload_uuid)
+
+    except PayloadNotFoundError as e:
+        return DeletePayloadErrorResponse(
+            error=str(e), error_type="not_found", payload_uuid=payload_uuid
+        )
+    except NoOperationError as e:
+        return DeletePayloadErrorResponse(
+            error=str(e), error_type="no_operation", payload_uuid=payload_uuid
+        )
+    except ConnectionError as e:
+        return DeletePayloadErrorResponse(
+            error=str(e), error_type="connection_error", payload_uuid=payload_uuid
+        )
+    except PayloadError as e:
+        return DeletePayloadErrorResponse(
+            error=str(e), error_type="delete_failed", payload_uuid=payload_uuid
+        )
+    except Exception as e:
+        logger.exception("Unexpected error in core_delete_payload")
+        return DeletePayloadErrorResponse(
+            error=f"Unexpected error: {type(e).__name__}: {e}",
+            error_type="unexpected_error",
+            payload_uuid=payload_uuid,
+        )

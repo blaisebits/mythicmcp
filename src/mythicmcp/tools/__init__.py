@@ -20,6 +20,7 @@ from mythicmcp.tools.operations import core_get_operation
 from mythicmcp.tools.payloads import (
     core_check_payload_config,
     core_create_payload,
+    core_delete_payload,
     core_download_payload,
     core_get_payload,
     core_list_payloads,
@@ -39,6 +40,7 @@ __all__ = [
     "core_list_payloads",
     "core_get_payload",
     "core_create_payload",
+    "core_delete_payload",
     "core_download_payload",
     "core_check_payload_config",
     "core_payload_redirect_rules",
