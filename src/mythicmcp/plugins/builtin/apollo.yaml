@@ -1,0 +1,1092 @@
+agent:
+  name: apollo
+  description: "Apollo Windows C# agent"
+  supported_os:
+    - Windows
+
+metadata:
+  agent_version: "2.4.8"
+  mythic_version: "3.4.6+"
+
+commands:
+  # =========================================================================
+  # Shell / Command Execution (6)
+  # =========================================================================
+
+  - name: shell
+    description: "Execute a shell command via cmd.exe on an Apollo callback"
+    mythic_command: shell
+    parameter_mode: raw_string
+    timeout: 60
+    parameters:
+      - name: command
+        type: string
+        description: "Shell command to execute via cmd.exe"
+        required: true
+
+  - name: powershell
+    description: "Run a PowerShell command in the currently executing process"
+    mythic_command: powershell
+    timeout: 60
+    parameters:
+      - name: command
+        type: string
+        description: "PowerShell command to execute"
+        required: true
+
+  - name: powerpick
+    description: "Inject PowerShell loader assembly into a sacrificial process and execute a command"
+    mythic_command: powerpick
+    timeout: 120
+    parameters:
+      - name: powershell_params
+        type: string
+        description: "PowerShell command to execute in injected process"
+        required: true
+
+  - name: powershell_import
+    description: "Import a .ps1 script into the agent cache. Use file_id from core_upload_file for the file parameter."
+    mythic_command: powershell_import
+    timeout: 60
+    parameters:
+      - name: file
+        type: string
+        description: "file_id from core_upload_file containing the .ps1 script to import"
+        required: true
+
+  - name: run
+    description: "Execute a program without cmd.exe wrapper on an Apollo callback"
+    mythic_command: run
+    timeout: 60
+    parameters:
+      - name: executable
+        type: string
+        description: "Path to executable"
+        required: true
+      - name: arguments
+        type: string
+        description: "Arguments to pass to executable"
+        default: ""
+
+  - name: wmiexecute
+    description: "Use WMI to execute a command on the local or specified remote system, optionally with alternate credentials"
+    mythic_command: wmiexecute
+    timeout: 60
+    parameters:
+      - name: command
+        type: string
+        description: "Full path and arguments of the process to execute"
+        required: true
+      - name: host
+        type: string
+        description: "Computer to execute the command on (default: current computer)"
+        required: false
+      - name: username
+        type: string
+        description: "Username of the account to execute the WMI process as"
+        required: false
+      - name: password
+        type: string
+        description: "Plaintext password of the account"
+        required: false
+      - name: domain
+        type: string
+        description: "Domain name for the account"
+        required: false
+
+  # =========================================================================
+  # File Operations (10)
+  # =========================================================================
+
+  - name: ls
+    description: "List directory contents on an Apollo callback"
+    mythic_command: ls
+    timeout: 60
+    parameters:
+      - name: path
+        type: string
+        description: "Path to list (default: current directory)"
+        default: "."
+      - name: host
+        type: string
+        description: "Host to list files on (default: local)"
+        required: false
+
+  - name: cat
+    description: "Read file contents on an Apollo callback"
+    mythic_command: cat
+    timeout: 60
+    parameters:
+      - name: path
+        type: string
+        description: "Path to file to read"
+        required: true
+
+  - name: cd
+    description: "Change working directory on an Apollo callback"
+    mythic_command: cd
+    timeout: 60
+    parameters:
+      - name: path
+        type: string
+        description: "Path to change to"
+        required: true
+
+  - name: pwd
+    description: "Get current working directory of an Apollo callback"
+    mythic_command: pwd
+    timeout: 60
+
+  - name: upload
+    description: "Upload a file from the Mythic server to the remote host. Use file_id from core_upload_file for the file parameter."
+    mythic_command: upload
+    timeout: 120
+    parameters:
+      - name: file
+        type: string
+        description: "file_id from core_upload_file for the file to upload"
+        required: true
+      - name: remote_path
+        type: string
+        description: "Path to write the file on the target (default: current working directory)"
+        required: false
+
+  - name: download
+    description: "Download a file from an Apollo callback"
+    mythic_command: download
+    timeout: 120
+    parameters:
+      - name: file
+        type: string
+        description: "Path to file to download"
+        required: true
+      - name: host
+        type: string
+        description: "Host to download file from (default: local)"
+        required: false
+
+  - name: cp
+    description: "Copy a file from one location to another"
+    mythic_command: cp
+    timeout: 60
+    parameters:
+      - name: source
+        type: string
+        description: "Source file to copy"
+        required: true
+      - name: destination
+        type: string
+        description: "Destination path for the copy"
+        required: true
+
+  - name: mv
+    description: "Move a file from source to destination"
+    mythic_command: mv
+    timeout: 60
+    parameters:
+      - name: source
+        type: string
+        description: "Source file to move"
+        required: true
+      - name: destination
+        type: string
+        description: "Destination path"
+        required: true
+
+  - name: rm
+    description: "Delete a file specified by path"
+    mythic_command: rm
+    timeout: 30
+    parameters:
+      - name: path
+        type: string
+        description: "Full path of the file to remove"
+        required: true
+
+  - name: mkdir
+    description: "Create a directory specified by path"
+    mythic_command: mkdir
+    timeout: 30
+    parameters:
+      - name: path
+        type: string
+        description: "Directory path to create"
+        required: true
+
+  # =========================================================================
+  # Process Management (4)
+  # =========================================================================
+
+  - name: ps
+    description: "List running processes on an Apollo callback"
+    mythic_command: ps
+    timeout: 60
+
+  - name: kill
+    description: "Kill a process specified by PID"
+    mythic_command: kill
+    timeout: 30
+    parameters:
+      - name: pid
+        type: integer
+        description: "Process ID to kill"
+        required: true
+
+  - name: jobs
+    description: "List currently executing jobs, excluding jobs and jobkill commands"
+    mythic_command: jobs
+    timeout: 30
+
+  - name: jobkill
+    description: "Kill a job specified by the job identifier (jid)"
+    mythic_command: jobkill
+    timeout: 30
+    parameters:
+      - name: jid
+        type: string
+        description: "Job identifier to terminate"
+        required: true
+
+  # =========================================================================
+  # Agent Management (3)
+  # =========================================================================
+
+  - name: sleep
+    description: "Change the implant's sleep interval and jitter percentage"
+    mythic_command: sleep
+    timeout: 30
+    parameters:
+      - name: interval
+        type: integer
+        description: "Sleep interval in seconds (-1 for no change)"
+        default: -1
+      - name: jitter
+        type: integer
+        description: "Jitter percentage (-1 for no change)"
+        default: -1
+
+  - name: exit
+    description: "Task the implant to exit"
+    mythic_command: exit
+    timeout: 30
+
+  - name: load
+    description: "Load one or more new commands into the agent. Provide command names as a comma-separated string."
+    mythic_command: load
+    timeout: 120
+    parameters:
+      - name: commands
+        type: string
+        description: "Comma-separated list of command names to load into the agent"
+        required: true
+
+  # =========================================================================
+  # Assembly / Code Execution (8)
+  # =========================================================================
+
+  - name: execute_assembly
+    description: "Execute a .NET assembly with specified arguments. Assembly must be registered via register_assembly first."
+    mythic_command: execute_assembly
+    timeout: 120
+    parameters:
+      - name: assembly_name
+        type: string
+        description: "Name of registered .NET assembly (e.g., 'Seatbelt.exe')"
+        required: true
+      - name: assembly_arguments
+        type: string
+        description: "Arguments to pass to assembly"
+        default: ""
+
+  - name: inline_assembly
+    description: "Execute a .NET assembly in a disposable AppDomain. Assembly must be registered via register_assembly first."
+    mythic_command: inline_assembly
+    timeout: 120
+    parameters:
+      - name: assembly_name
+        type: string
+        description: "Name of registered .NET assembly to execute"
+        required: true
+      - name: assembly_arguments
+        type: string
+        description: "Arguments to pass to the assembly"
+        default: ""
+
+  - name: assembly_inject
+    description: "Inject the unmanaged assembly loader into a remote process and execute a .NET binary"
+    mythic_command: assembly_inject
+    timeout: 120
+    parameters:
+      - name: pid
+        type: integer
+        description: "Process ID to inject into"
+        required: true
+      - name: assembly_name
+        type: string
+        description: "Name of registered .NET assembly to execute"
+        required: true
+      - name: assembly_arguments
+        type: string
+        description: "Arguments to pass to the assembly"
+        default: ""
+
+  - name: register_assembly
+    description: "Import a .NET assembly into the agent cache. Use file_id from core_upload_file for the file parameter."
+    mythic_command: register_assembly
+    timeout: 60
+    parameters:
+      - name: file
+        type: string
+        description: "file_id from core_upload_file containing the .NET assembly"
+        required: true
+
+  - name: register_file
+    description: "Register a file in the agent cache for later use. Use file_id from core_upload_file for the file parameter."
+    mythic_command: register_file
+    timeout: 60
+    parameters:
+      - name: file
+        type: string
+        description: "file_id from core_upload_file containing the file to register"
+        required: true
+
+  - name: register_coff
+    description: "Import a COFF (Common Object File Format) into the agent cache. Use file_id from core_upload_file for the file parameter."
+    mythic_command: register_coff
+    timeout: 60
+    parameters:
+      - name: file
+        type: string
+        description: "file_id from core_upload_file containing the COFF file"
+        required: true
+
+  - name: execute_pe
+    description: "Execute an unmanaged PE with specified arguments. PE must be registered via register_file first."
+    mythic_command: execute_pe
+    timeout: 120
+    parameters:
+      - name: pe_name
+        type: string
+        description: "Name of registered PE to execute (e.g., 'mimikatz.exe')"
+        required: true
+      - name: pe_arguments
+        type: string
+        description: "Arguments to pass to the PE"
+        default: ""
+
+  - name: execute_coff
+    description: "Execute a COFF file in memory. COFF must be registered via register_coff first."
+    mythic_command: execute_coff
+    timeout: 120
+    parameters:
+      - name: coff_name
+        type: string
+        description: "Name of registered COFF to execute (e.g., 'whoami.x64.o')"
+        required: true
+      - name: function_name
+        type: string
+        description: "Entry function name in the COFF"
+        default: "go"
+      - name: coff_arguments
+        type: beacon_args
+        description: "Arguments to pass to the COFF. Supports either a flat string or typed Beacon argument pairs like [[\"wchar\",\"arg1\"],[\"int32\",123]]."
+        default: ""
+
+  # =========================================================================
+  # Injection / Spawning (7)
+  # =========================================================================
+
+  - name: screenshot
+    description: "Take a screenshot on an Apollo callback"
+    mythic_command: screenshot
+    timeout: 120
+
+  - name: inject
+    description: "Inject agent shellcode into a remote process. Provide a payload template UUID."
+    mythic_command: inject
+    timeout: 120
+    parameters:
+      - name: template
+        type: string
+        description: "Payload template UUID (shellcode format)"
+        required: true
+      - name: pid
+        type: integer
+        description: "Process ID to inject into"
+        required: true
+
+  - name: shinject
+    description: "Inject shellcode into a remote process. Use file_id from core_upload_file for the shellcode parameter."
+    mythic_command: shinject
+    timeout: 60
+    parameters:
+      - name: pid
+        type: integer
+        description: "Process ID to inject into"
+        required: true
+      - name: shellcode
+        type: string
+        description: "file_id from core_upload_file containing the shellcode"
+        required: true
+
+  - name: psinject
+    description: "Execute PowerShell in the context of the specified process"
+    mythic_command: psinject
+    timeout: 120
+    parameters:
+      - name: pid
+        type: integer
+        description: "Process ID to inject into"
+        required: true
+      - name: powershell_params
+        type: string
+        description: "PowerShell command to execute"
+        required: true
+
+  - name: spawn
+    description: "Spawn a new session using the spawnto executable. Provide a payload template UUID (must be shellcode format)."
+    mythic_command: spawn
+    timeout: 120
+    parameters:
+      - name: template
+        type: string
+        description: "Payload template UUID (shellcode format, must be Apollo agent)"
+        required: true
+
+  - name: screenshot_inject
+    description: "Take a screenshot in the session of the target PID"
+    mythic_command: screenshot_inject
+    timeout: 120
+    parameters:
+      - name: pid
+        type: integer
+        description: "Process ID to inject into"
+        required: true
+      - name: count
+        type: integer
+        description: "Number of screenshots to take"
+        default: 1
+      - name: interval
+        type: integer
+        description: "Interval in seconds between screenshots"
+        default: 0
+
+  - name: keylog_inject
+    description: "Start a keylogger in a remote process"
+    mythic_command: keylog_inject
+    timeout: 120
+    parameters:
+      - name: pid
+        type: integer
+        description: "Process ID to inject keylogger into"
+        required: true
+
+  # =========================================================================
+  # Token / Identity (6)
+  # =========================================================================
+
+  - name: make_token
+    description: "Create a new logon session and apply it to the agent"
+    mythic_command: make_token
+    timeout: 30
+    parameters:
+      - name: username
+        type: string
+        description: "Username in domain\\user format"
+        required: true
+      - name: password
+        type: string
+        description: "Password for the account"
+        required: true
+      - name: netOnly
+        type: boolean
+        description: "Use NetOnly logon (LOGON32_LOGON_NEW_CREDENTIALS). If false, uses interactive logon."
+        default: true
+
+  - name: steal_token
+    description: "Steal a primary token from another process"
+    mythic_command: steal_token
+    timeout: 30
+    parameters:
+      - name: pid
+        type: integer
+        description: "Process ID to steal token from"
+        required: true
+
+  - name: rev2self
+    description: "Revert token to the implant's primary token"
+    mythic_command: rev2self
+    timeout: 30
+
+  - name: getprivs
+    description: "Enable as many privileges as possible on the current thread token"
+    mythic_command: getprivs
+    timeout: 30
+
+  - name: whoami
+    description: "Get the username associated with the current thread token"
+    mythic_command: whoami
+    timeout: 30
+
+  - name: getsystem
+    description: "Open a handle to winlogon and duplicate the token (requires admin)"
+    mythic_command: getsystem
+    timeout: 30
+
+  # =========================================================================
+  # Credential Operations (4)
+  # =========================================================================
+
+  - name: mimikatz
+    description: "Execute one or more mimikatz commands (e.g., 'coffee sekurlsa::logonpasswords'). Pass commands as space-separated string."
+    mythic_command: mimikatz
+    timeout: 120
+    parameters:
+      - name: commands
+        type: string
+        description: "Mimikatz commands to execute (space-separated, e.g., 'coffee sekurlsa::logonpasswords')"
+        required: true
+
+  - name: dcsync
+    description: "Sync a user's Kerberos keys from a domain controller"
+    mythic_command: dcsync
+    timeout: 120
+    parameters:
+      - name: domain
+        type: string
+        description: "Domain to sync credentials from"
+        required: true
+      - name: user
+        type: string
+        description: "Username to sync (default: all users)"
+        default: "all"
+      - name: dc
+        type: string
+        description: "Domain controller to sync from"
+        required: false
+
+  - name: pth
+    description: "Spawn a new process using pass-the-hash with NTLM credentials"
+    mythic_command: pth
+    timeout: 120
+    parameters:
+      - name: domain
+        type: string
+        description: "Domain associated with the user"
+        required: true
+      - name: user
+        type: string
+        description: "Username associated with the NTLM hash"
+        required: true
+      - name: ntlm
+        type: string
+        description: "User's NTLM hash"
+        required: true
+      - name: run
+        type: string
+        description: "Process to launch under the specified credentials"
+        required: false
+
+  - name: printspoofer
+    description: "Execute PrintSpoofer commands for privilege escalation"
+    mythic_command: printspoofer
+    timeout: 120
+    parameters:
+      - name: command
+        type: string
+        description: "PrintSpoofer arguments"
+        required: true
+
+  # =========================================================================
+  # Network Reconnaissance (8)
+  # =========================================================================
+
+  - name: ifconfig
+    description: "Get network interface information for the target"
+    mythic_command: ifconfig
+    timeout: 30
+
+  - name: netstat
+    description: "View network connection entries with optional filters"
+    mythic_command: netstat
+    timeout: 30
+    parameters:
+      - name: tcp
+        type: boolean
+        description: "Display only TCP entries"
+        default: false
+      - name: udp
+        type: boolean
+        description: "Display only UDP entries"
+        default: false
+      - name: established
+        type: boolean
+        description: "Display only established entries"
+        default: false
+      - name: listen
+        type: boolean
+        description: "Display only listening entries"
+        default: false
+
+  - name: listpipes
+    description: "List all named pipes on the local system"
+    mythic_command: listpipes
+    timeout: 30
+
+  - name: net_shares
+    description: "List remote shares and their accessibility on a computer"
+    mythic_command: net_shares
+    timeout: 30
+    parameters:
+      - name: computer
+        type: string
+        description: "Computer to enumerate (default: localhost)"
+        required: false
+
+  - name: net_dclist
+    description: "Get domain controllers belonging to a domain (defaults to current domain)"
+    mythic_command: net_dclist
+    timeout: 30
+    parameters:
+      - name: domain
+        type: string
+        description: "Domain name to enumerate domain controllers for"
+        required: false
+
+  - name: net_localgroup
+    description: "Get local groups of a computer (defaults to localhost)"
+    mythic_command: net_localgroup
+    timeout: 30
+    parameters:
+      - name: computer
+        type: string
+        description: "Computer to enumerate local groups on"
+        required: false
+
+  - name: net_localgroup_member
+    description: "Retrieve local group membership for a specified group"
+    mythic_command: net_localgroup_member
+    timeout: 30
+    parameters:
+      - name: group
+        type: string
+        description: "Group name to enumerate members of"
+        required: true
+      - name: computer
+        type: string
+        description: "Computer to enumerate (default: localhost)"
+        required: false
+
+  - name: ldap_query
+    description: "Execute an LDAP query against the domain"
+    mythic_command: ldap_query
+    timeout: 60
+    parameters:
+      - name: query
+        type: string
+        description: "LDAP query to issue"
+        default: ""
+      - name: base
+        type: string
+        description: "LDAP search base"
+        default: ""
+      - name: attributes
+        type: string
+        description: "Attributes to return as JSON array (e.g., '[\"cn\",\"distinguishedName\"]')"
+        default: ""
+      - name: limit
+        type: integer
+        description: "Limit the number of results (0 for no limit)"
+        default: 100
+
+  # =========================================================================
+  # Registry (2)
+  # =========================================================================
+
+  - name: reg_query
+    description: "Query registry keys and values for an associated registry key"
+    mythic_command: reg_query
+    timeout: 30
+    parameters:
+      - name: hive
+        type: string
+        description: "Registry hive to query"
+        default: "HKLM"
+        choices:
+          - "HKLM"
+          - "HKCU"
+          - "HKU"
+          - "HKCR"
+          - "HKCC"
+      - name: key
+        type: string
+        description: "Registry key to interrogate"
+        default: ""
+
+  - name: reg_write_value
+    description: "Write a new value to the specified registry key"
+    mythic_command: reg_write_value
+    timeout: 30
+    parameters:
+      - name: hive
+        type: string
+        description: "Registry hive"
+        default: "HKLM"
+        choices:
+          - "HKLM"
+          - "HKCU"
+          - "HKU"
+          - "HKCR"
+          - "HKCC"
+      - name: key
+        type: string
+        description: "Registry key path"
+        default: "\\"
+      - name: value_name
+        type: string
+        description: "Registry value name to write to"
+        required: true
+      - name: value_value
+        type: string
+        description: "New value to store"
+        default: ""
+      - name: value_type
+        type: string
+        description: "Type of the registry value"
+        default: "REG_SZ"
+        choices:
+          - "REG_SZ"
+          - "REG_EXPAND_SZ"
+          - "REG_BINARY"
+          - "REG_DWORD"
+          - "REG_MULTI_SZ"
+          - "REG_QWORD"
+          - "UNKNOWN"
+
+  # =========================================================================
+  # Service Control (1)
+  # =========================================================================
+
+  - name: sc
+    description: "Service control manager wrapper. Set one action boolean to true (query/start/stop/create/delete) and provide relevant parameters."
+    mythic_command: sc
+    timeout: 60
+    parameters:
+      - name: action
+        type: string
+        description: "Service action to perform"
+        required: true
+        choices:
+          - "query"
+          - "start"
+          - "stop"
+          - "create"
+          - "delete"
+      - name: service
+        type: string
+        description: "Name of the service"
+        required: false
+      - name: computer
+        type: string
+        description: "Host to perform the service action on"
+        required: false
+      - name: display_name
+        type: string
+        description: "Display name of the service (used with create)"
+        required: false
+      - name: binpath
+        type: string
+        description: "Path to the binary (required for create action)"
+        required: false
+
+  # =========================================================================
+  # Kerberos Tickets (7)
+  # =========================================================================
+
+  - name: ticket_store_add
+    description: "Add a Kerberos ticket to the agent's internal ticket store"
+    mythic_command: ticket_store_add
+    timeout: 60
+    parameters:
+      - name: base64ticket
+        type: string
+        description: "Base64 encoded Kerberos ticket value"
+        required: true
+
+  - name: ticket_store_list
+    description: "List all Kerberos tickets in the agent's ticket store"
+    mythic_command: ticket_store_list
+    timeout: 30
+    parameters:
+      - name: luid
+        type: string
+        description: "Filter tickets by LUID"
+        default: ""
+
+  - name: ticket_store_purge
+    description: "Remove a ticket from the agent's ticket store"
+    mythic_command: ticket_store_purge
+    timeout: 30
+    parameters:
+      - name: serviceName
+        type: string
+        description: "Service name to remove (include domain name)"
+        required: false
+      - name: all
+        type: boolean
+        description: "Remove all tickets from the store"
+        default: false
+
+  - name: ticket_cache_add
+    description: "Add a Kerberos ticket to the current LUID, or a specified LUID if elevated"
+    mythic_command: ticket_cache_add
+    timeout: 60
+    parameters:
+      - name: base64ticket
+        type: string
+        description: "Base64 encoded Kerberos ticket value"
+        required: true
+      - name: luid
+        type: string
+        description: "Target a specific LUID from an elevated context"
+        required: false
+
+  - name: ticket_cache_list
+    description: "List Kerberos tickets in the current logon session, or all sessions if elevated"
+    mythic_command: ticket_cache_list
+    timeout: 30
+    parameters:
+      - name: luid
+        type: string
+        description: "Target a specific LUID from an elevated context"
+        default: ""
+      - name: getSystemTickets
+        type: boolean
+        description: "Set to false to filter out SYSTEM context tickets"
+        default: false
+
+  - name: ticket_cache_purge
+    description: "Remove a ticket from the system's ticket cache"
+    mythic_command: ticket_cache_purge
+    timeout: 30
+    parameters:
+      - name: serviceName
+        type: string
+        description: "Service name to remove (include domain name)"
+        default: ""
+      - name: all
+        type: boolean
+        description: "Remove all tickets from the current LUID"
+        default: false
+      - name: luid
+        type: string
+        description: "Target a specific LUID from an elevated context"
+        default: ""
+
+  - name: ticket_cache_extract
+    description: "Extract a ticket for a service from the current or specified LUID"
+    mythic_command: ticket_cache_extract
+    timeout: 60
+    parameters:
+      - name: service
+        type: string
+        description: "Service to extract ticket for (use 'krbtgt' for TGT, otherwise 'cifs', 'ldap', 'host', etc.)"
+        required: true
+      - name: luid
+        type: string
+        description: "Target a specific LUID from an elevated context"
+        required: false
+
+  # =========================================================================
+  # Process / Injection Config (6)
+  # =========================================================================
+
+  - name: spawnto_x64
+    description: "Change the default 64-bit binary used in post-exploitation jobs"
+    mythic_command: spawnto_x64
+    timeout: 30
+    parameters:
+      - name: application
+        type: string
+        description: "Path to the 64-bit application"
+        default: "C:\\Windows\\System32\\rundll32.exe"
+      - name: arguments
+        type: string
+        description: "Arguments to launch the process with"
+        default: ""
+
+  - name: spawnto_x86
+    description: "Change the default 32-bit binary used in post-exploitation jobs"
+    mythic_command: spawnto_x86
+    timeout: 30
+    parameters:
+      - name: application
+        type: string
+        description: "Path to the 32-bit application"
+        default: "C:\\Windows\\System32\\rundll32.exe"
+      - name: arguments
+        type: string
+        description: "Arguments to launch the process with"
+        default: ""
+
+  - name: ppid
+    description: "Change the parent process for post-exploitation jobs by PID"
+    mythic_command: ppid
+    timeout: 30
+    parameters:
+      - name: ppid
+        type: integer
+        description: "Parent Process ID (must be divisible by 4)"
+        default: -1
+
+  - name: blockdlls
+    description: "Block non-Microsoft DLLs from loading into sacrificial processes"
+    mythic_command: blockdlls
+    timeout: 30
+    parameters:
+      - name: block
+        type: boolean
+        description: "Block non-Microsoft DLLs from being loaded"
+        default: true
+
+  - name: get_injection_techniques
+    description: "List the currently available injection techniques the agent knows about"
+    mythic_command: get_injection_techniques
+    timeout: 30
+
+  - name: set_injection_technique
+    description: "Set the injection technique used in post-exploitation jobs. Must be a technique listed by get_injection_techniques."
+    mythic_command: set_injection_technique
+    timeout: 30
+    parameters:
+      - name: technique
+        type: string
+        description: "Injection technique name from get_injection_techniques output"
+        required: true
+
+  # =========================================================================
+  # P2P / Networking (4)
+  # =========================================================================
+
+  - name: link
+    description: "Link to a new agent on a remote host or re-link to an unlinked callback"
+    mythic_command: link
+    timeout: 60
+    parameters:
+      - name: connection_info
+        type: string
+        description: "Connection info as JSON string for P2P link"
+        required: true
+
+  - name: unlink
+    description: "Unlink a callback from the agent"
+    mythic_command: unlink
+    timeout: 30
+    parameters:
+      - name: link_info
+        type: string
+        description: "Link info as JSON string identifying the callback to unlink"
+        required: true
+
+  - name: socks
+    description: "Start or stop a SOCKS5-compliant proxy to send data to the target network"
+    mythic_command: socks
+    timeout: 30
+    parameters:
+      - name: port
+        type: integer
+        description: "Port to start the SOCKS server on"
+        required: true
+      - name: action
+        type: string
+        description: "Start or stop the proxy server"
+        default: "start"
+        choices:
+          - "start"
+          - "stop"
+      - name: username
+        type: string
+        description: "Username required to authenticate to the SOCKS port"
+        required: false
+      - name: password
+        type: string
+        description: "Password required to authenticate to the SOCKS port"
+        required: false
+
+  - name: rpfwd
+    description: "Start listening on a port on the target host and forward traffic through Mythic to a remote IP and port"
+    mythic_command: rpfwd
+    timeout: 60
+    parameters:
+      - name: port
+        type: integer
+        description: "Port to listen for connections on the target host"
+        required: true
+      - name: remote_ip
+        type: string
+        description: "Remote IP to forward traffic to"
+        required: true
+      - name: remote_port
+        type: integer
+        description: "Remote port to forward traffic to"
+        required: true
+      - name: username
+        type: string
+        description: "Port authentication username"
+        required: false
+      - name: password
+        type: string
+        description: "Port authentication password"
+        required: false
+
+  # =========================================================================
+  # Lateral Movement (2)
+  # =========================================================================
+
+  - name: jump_wmi
+    description: "Use WMI to move laterally to a new host by copying and executing a payload"
+    mythic_command: jump_wmi
+    timeout: 120
+    parameters:
+      - name: host
+        type: string
+        description: "Target host for lateral movement"
+        required: true
+      - name: payload
+        type: string
+        description: "Payload template UUID to deploy"
+        required: true
+      - name: command
+        type: string
+        description: "Command to execute on the remote host"
+        default: "C:\\Windows\\apollo.exe"
+      - name: remote_path
+        type: string
+        description: "Remote upload location (UNC path)"
+        default: "ADMIN$\\apollo.exe"
+
+  - name: jump_psexec
+    description: "Use PsExec-style service creation to move laterally to a new host"
+    mythic_command: jump_psexec
+    timeout: 120
+    parameters:
+      - name: host
+        type: string
+        description: "Target host for lateral movement"
+        required: true
+      - name: payload
+        type: string
+        description: "Payload template UUID to deploy"
+        required: true
+      - name: command
+        type: string
+        description: "Command to execute on the remote host"
+        default: "C:\\Windows\\apollo.exe"
+      - name: remote_path
+        type: string
+        description: "Remote upload location (UNC path)"
+        default: "ADMIN$\\apollo.exe"
+      - name: remote_service_name
+        type: string
+        description: "Remote service name (auto-generated if empty)"
+        default: ""

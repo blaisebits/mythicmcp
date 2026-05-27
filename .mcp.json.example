@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "mythicmcp": {
+      "type": "stdio",
+      "command": "uv",
+      "args": ["run", "--directory", "/path/to/mythicmcp", "mythicmcp"],
+      "env": {
+        "MYTHIC_SERVER_URL": "https://mythic-server:7443",
+        "MYTHIC_API_TOKEN": "your-api-token-here"
+      }
+    }
+  }
+}

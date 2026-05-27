@@ -1,0 +1,97 @@
+[build-system]
+requires = ["hatchling==1.29.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mythicmcp"
+version = "0.1.0"
+description = "MCP server for Mythic C2 Framework"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [
+    { name = "MythicMCP Contributors" }
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "mcp>=1.26.0",
+    "makefun>=1.16.0",
+    "mythic>=0.2.10",
+    "pydantic>=2.0.0",
+    "pyyaml>=6.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/blaisebits/mythicmcp"
+Repository = "https://github.com/blaisebits/mythicmcp"
+Documentation = "https://github.com/blaisebits/mythicmcp#readme"
+Issues = "https://github.com/blaisebits/mythicmcp/issues"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.scripts]
+mythicmcp = "mythicmcp.server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mythicmcp"]
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+    "/.claude",
+    "/.git",
+    "/.local",
+    "/.pytest_cache",
+    "/.specify",
+    "/.uv-cache",
+    "/.venv",
+    "/refs",
+    "/build",
+    "/dist",
+    "/htmlcov",
+    "/.env",
+    "/.env.*",
+    "/.mcp.json",
+    "/tests/integration/config.yaml",
+    "/tests/integration/config.yaml.*",
+    "/tests/lab_test_config.yaml",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+markers = [
+    "integration: marks tests as integration tests (require real Mythic server)",
+]
+
+[tool.coverage.run]
+source = ["src/mythicmcp"]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+]

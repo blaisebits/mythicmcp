@@ -1,0 +1,65 @@
+refs/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+tests/integration/config.yaml
+tests/integration/config.yaml.*
+tests/integration/config.apollo.yaml
+tests/integration/config.arachne.yaml
+tests/integration/config.poseidon.yaml
+tests/lab_test_config.yaml
+
+# Environment
+.env
+.env.*
+*.local
+.mcp.json
+.local/
+
+# Docker Codex harness
+.local/codex-docker-home/
+.local/session-captures/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

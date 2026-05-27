@@ -1,0 +1,10 @@
+network:
+  callback_internal_ip: "CALLBACK_INTERNAL_IP"
+  callback_alt_ip: "CALLBACK_ALT_IP"
+  callback_secondary_ip: "CALLBACK_SECONDARY_IP"
+  callback_external_ip: "CALLBACK_EXTERNAL_IP"
+  mythic_server_url: "https://MYTHIC_SERVER_HOST:7443"
+  mythic_callback_host: "https://MYTHIC_SERVER_HOST"
+  unc_share: "\\\\FILESERVER\\IPC$"
+  unc_other_share: "\\\\FILESERVER\\Other$"
+  unc_missing_share: "\\\\FILESERVER\\MissingShare"

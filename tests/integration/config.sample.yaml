@@ -1,0 +1,566 @@
+# MythicMCP Integration Test Configuration
+# Copy this file to config.yaml and fill in your environment details:
+#   cp config.sample.yaml config.yaml
+#
+# This file is gitignored — config.yaml will not be committed.
+
+# Mythic server connection settings
+mythic:
+  # Mythic server URL (include scheme and port)
+  server_url: "https://MYTHIC_IP:7443"
+
+  # Authentication: provide EITHER api_token OR username+password
+  api_token: "eyJ..."
+  # username: "mythic_admin"
+  # password: "your_password_here"
+
+  # Connection timeout in seconds (default: 30)
+  timeout: 30
+
+# Default timeouts for each test phase (all in seconds)
+timeouts:
+  payload_generation: 300    # Max time to wait for payload build
+  callback_verification: 120 # Max time to poll for new callback
+  command_execution: 60      # Max time per test command
+  polling_interval: 5        # Seconds between callback polls
+
+# Agent type definitions — each agent will have a payload generated
+agents:
+  - name: "apollo"
+    payload_type: "apollo"       # Mythic payload type name
+    os: "Windows"                # Target OS for the payload build
+    filename: "apollo_test.exe"  # Output filename
+    c2_profiles:
+      - c2_profile: "http"
+        c2_profile_parameters:
+          callback_host: "https://MYTHIC_IP"
+          callback_port: 443
+    build_parameters: []         # Optional build-time parameters
+    description: "Apollo test payload for Windows targets"
+
+  - name: "arachne"
+    payload_type: "arachne"
+    os: "Linux"
+    filename: "arachne_test"
+    agent_type: "webshell"
+    c2_profiles:
+      - c2_profile: "webshell"
+        c2_profile_parameters:
+          # URL must match the upload_path filename on the target.
+          # Use http:// or https:// to match the target's web server config.
+          url: "http://LINUX_TARGET_IP/uploads/arachne_test.php"
+          cookie_name: "session"
+          query_param: "id"
+          user_agent: "Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko"
+    build_parameters: []
+    description: "Arachne test payload for Linux targets"
+
+  - name: "poseidon"
+    payload_type: "poseidon"
+    os: "Linux"
+    filename: "poseidon_test"
+    c2_profiles:
+      - c2_profile: "http"
+        c2_profile_parameters:
+          callback_host: "https://MYTHIC_IP"
+          callback_port: 443
+    build_parameters: []
+    description: "Poseidon test payload for Linux targets"
+
+# Target systems — each must have a pre-existing callback for file operations
+targets:
+  - name: "windows-target"
+    hostname: "WIN11-PC"         # Expected hostname in callback metadata
+    os: "Windows"
+    callback_id: 1               # Pre-existing callback ID for upload/execute
+    upload_path: "C:\\Users\\Public\\test_payload.exe"
+    agents:                      # Which agents to test on this target
+      - "apollo"
+
+  - name: "linux-target-arachne"
+    hostname: "debian-vm"
+    os: "Linux"
+    callback_id: 2               # Pre-existing callback with write access
+    # upload_path must be in a www-data-writable directory.
+    # The filename must match the c2_profile url path above.
+    upload_path: "/var/www/html/uploads/arachne_test.php"
+    agents:
+      - "arachne"
+
+  - name: "linux-target-poseidon"
+    hostname: "debian-vm"
+    os: "Linux"
+    callback_id: 3
+    upload_path: "/tmp/test_payload"
+    agents:
+      - "poseidon"
+
+# =============================================================================
+# Prerequisites
+# =============================================================================
+#   - Pre-existing callbacks on each target (callback_ids above)
+#   - For Arachne: web server on target serving /var/www/html/uploads/ over HTTP
+#     with the uploads directory writable by the callback's user
+#   - The test runner auto-uploads tests/integration/fixtures/test_upload.txt
+#     and substitutes REPLACE_WITH_FILE_ID at runtime. No manual step needed.
+#
+# IMPORTANT: Apollo uses modular command loading. Only shell and load are
+# built into the payload by default. All other commands must be loaded at
+# runtime via the "load" command before they can be used.
+test_commands:
+  apollo:
+    # =======================================================================
+    # Load all commands upfront — only shell and load are built-in defaults.
+    # Everything else must be loaded before use.
+    # =======================================================================
+    - command: "load"
+      parameters:
+        commands:
+          - "sleep"
+          - "powershell"
+          - "powerpick"
+          - "run"
+          - "wmiexecute"
+          - "pwd"
+          - "ls"
+          - "cat"
+          - "mkdir"
+          - "cp"
+          - "mv"
+          - "rm"
+          - "upload"
+          - "download"
+          - "ps"
+          - "jobs"
+          - "ifconfig"
+          - "netstat"
+          - "net_shares"
+          - "net_localgroup"
+          - "net_localgroup_member"
+          - "reg_query"
+          - "reg_write_value"
+          - "sc"
+      expected_output: ""
+      timeout: 300
+
+    # =======================================================================
+    # Set callback interval to 1s for faster test execution
+    # =======================================================================
+    - command: "sleep"
+      parameters:
+        interval: 1
+        jitter: 0
+      expected_output: ""
+      timeout: 30
+
+    # =======================================================================
+    # Shell & Execute — validate each execution path
+    # =======================================================================
+    - command: "shell"
+      parameters: "whoami"
+      expected_output: "\\"           # domain\user
+      timeout: 60
+    - command: "powershell"
+      parameters: "$env:COMPUTERNAME"
+      expected_output: ""             # any non-empty hostname
+      timeout: 60
+    - command: "powerpick"
+      parameters: "$env:USERNAME"
+      expected_output: ""             # username
+      timeout: 120
+    - command: "run"
+      parameters:
+        executable: "whoami.exe"
+        arguments: ""
+      expected_output: "\\"           # domain\user
+      timeout: 60
+    - command: "wmiexecute"
+      parameters:
+        command: "cmd.exe /c hostname"
+      expected_output: ""             # hostname
+      timeout: 60
+
+    # =======================================================================
+    # File Operations — sequenced: pwd → ls → mkdir → upload → cat → cp → mv → rm
+    # =======================================================================
+    - command: "pwd"
+      parameters: ""
+      expected_output: "C:\\"
+      timeout: 60
+    - command: "ls"
+      parameters:
+        path: "C:\\Users"
+      expected_output: "Public"
+      timeout: 60
+    - command: "mkdir"
+      parameters:
+        path: "C:\\Users\\Public\\mcp_test"
+      expected_output: ""
+      timeout: 30
+    - command: "upload"
+      parameters:
+        file: "REPLACE_WITH_FILE_ID"  # file_id from core_upload_file
+        remote_path: "C:\\Users\\Public\\mcp_test\\test.txt"
+      expected_output: ""
+      timeout: 120
+    - command: "cat"
+      parameters:
+        path: "C:\\Users\\Public\\mcp_test\\test.txt"
+      expected_output: "MythicMCP-test-fixture"
+      timeout: 60
+    - command: "cp"
+      parameters:
+        source: "C:\\Users\\Public\\mcp_test\\test.txt"
+        destination: "C:\\Users\\Public\\mcp_test\\test_copy.txt"
+      expected_output: ""
+      timeout: 60
+    - command: "mv"
+      parameters:
+        source: "C:\\Users\\Public\\mcp_test\\test_copy.txt"
+        destination: "C:\\Users\\Public\\mcp_test\\test_moved.txt"
+      expected_output: ""
+      timeout: 60
+    - command: "rm"
+      parameters:
+        path: "C:\\Users\\Public\\mcp_test\\test_moved.txt"
+      expected_output: ""
+      timeout: 30
+    - command: "rm"
+      parameters:
+        path: "C:\\Users\\Public\\mcp_test\\test.txt"
+      expected_output: ""
+      timeout: 30
+
+    # =======================================================================
+    # Process & Jobs
+    # =======================================================================
+    - command: "ps"
+      parameters: ""
+      expected_output: "svchost"      # always present on Windows
+      timeout: 60
+    - command: "jobs"
+      parameters: ""
+      expected_output: ""             # may be empty if no long-running jobs
+      timeout: 30
+
+    # =======================================================================
+    # Network Recon
+    # =======================================================================
+    - command: "ifconfig"
+      parameters: ""
+      expected_output: "Address"      # NIC address info
+      timeout: 30
+    - command: "netstat"
+      parameters:
+        tcp: true
+      expected_output: ""             # TCP connection table
+      timeout: 30
+    - command: "net_shares"
+      parameters: "{}"
+      expected_output: "ADMIN\\$"      # default admin share
+      timeout: 30
+    - command: "net_localgroup"
+      parameters: "{}"
+      expected_output: "Administrators"
+      timeout: 30
+    - command: "net_localgroup_member"
+      parameters:
+        group: "Administrators"
+      expected_output: ""             # at least one admin account
+      timeout: 30
+
+    # =======================================================================
+    # Registry
+    # =======================================================================
+    - command: "reg_query"
+      parameters:
+        hive: "HKLM"
+        key: "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion"
+      expected_output: "ProductName"  # always present
+      timeout: 30
+    - command: "reg_write_value"
+      parameters:
+        hive: "HKCU"
+        key: "SOFTWARE\\MythicMCP_Test"
+        value_name: "test_value"
+        value_value: "mcp_integration_test"
+        value_type: "REG_SZ"
+      expected_output: ""
+      timeout: 30
+    - command: "reg_query"            # verify the write
+      parameters:
+        hive: "HKCU"
+        key: "SOFTWARE\\MythicMCP_Test"
+      expected_output: "test_value"
+      timeout: 30
+
+    # =======================================================================
+    # Service Control
+    # =======================================================================
+    - command: "sc"
+      parameters:
+        action: "query"
+      expected_output: "Spooler"      # Print Spooler present on most Windows
+      timeout: 60
+    - command: "sc"
+      parameters:
+        action: "query"
+        service: "Spooler"
+      expected_output: "Spooler"
+      timeout: 60
+
+  # ===========================================================================
+  # Arachne (Linux webshell)
+  # ===========================================================================
+  arachne:
+    # Shell & Command Execution
+    - command: "shell"
+      parameters: "id"
+      expected_output: "uid="
+      timeout: 60
+    - command: "shell"
+      parameters: "uname -a"
+      expected_output: "Linux"
+      timeout: 60
+
+    # File Operations
+    - command: "pwd"
+      parameters: {}
+      expected_output: "/"
+      timeout: 60
+    - command: "ls"
+      parameters:
+        path: "/tmp"
+      expected_output: ""
+      timeout: 60
+    - command: "shell"
+      parameters: "mkdir -p /tmp/mcp_test"
+      expected_output: ""
+      timeout: 30
+    - command: "upload"
+      parameters:
+        file: "REPLACE_WITH_FILE_ID"
+        remote_path: "/tmp/mcp_test/test.txt"
+      expected_output: ""
+      timeout: 120
+    - command: "shell"
+      parameters: "cat /tmp/mcp_test/test.txt"
+      expected_output: "MythicMCP-test-fixture"
+      timeout: 60
+    - command: "download"
+      parameters:
+        file_path: "/tmp/mcp_test/test.txt"
+      expected_output: ""
+      timeout: 120
+    - command: "rm"
+      parameters:
+        path: "/tmp/mcp_test/test.txt"
+      expected_output: ""
+      timeout: 30
+    - command: "shell"
+      parameters: "rmdir /tmp/mcp_test"
+      expected_output: ""
+      timeout: 30
+
+  poseidon:
+    # =======================================================================
+    # Shell & Command Execution
+    # =======================================================================
+    - command: "shell"
+      parameters: "id"
+      expected_output: "uid="
+      timeout: 60
+    - command: "run"
+      parameters:
+        path: "/usr/bin/uname"
+        args:
+          - "-a"
+      expected_output: "Linux"
+      timeout: 60
+
+    # =======================================================================
+    # File Operations — sequenced: pwd → cd → ls → mkdir → upload → cat →
+    #   head → tail → triagedirectory → chmod → cp → mv →
+    #   download → download_bulk → rm
+    # =======================================================================
+    - command: "pwd"
+      parameters: {}
+      expected_output: "/"
+      timeout: 60
+    - command: "cd"
+      parameters: "/tmp"
+      expected_output: ""
+      timeout: 30
+    - command: "ls"
+      parameters:
+        path: "/tmp"
+      expected_output: ""
+      timeout: 60
+    - command: "mkdir"
+      parameters: "/tmp/mcp_test"
+      expected_output: ""
+      timeout: 30
+    - command: "upload"
+      parameters:
+        file_id: "REPLACE_WITH_FILE_ID"
+        remote_path: "/tmp/mcp_test/test.txt"
+      expected_output: ""
+      timeout: 120
+    - command: "cat"
+      parameters: "/tmp/mcp_test/test.txt"
+      expected_output: "MythicMCP-test-fixture"
+      timeout: 60
+    - command: "head"
+      parameters:
+        path: "/tmp/mcp_test/test.txt"
+        lines: 5
+      expected_output: ""
+      timeout: 60
+    - command: "tail"
+      parameters:
+        path: "/tmp/mcp_test/test.txt"
+        lines: 5
+      expected_output: ""
+      timeout: 60
+    - command: "triagedirectory"
+      parameters: "/tmp/mcp_test"
+      expected_output: ""
+      timeout: 60
+    - command: "chmod"
+      parameters:
+        path: "/tmp/mcp_test/test.txt"
+        mode: "644"
+      expected_output: ""
+      timeout: 30
+    - command: "cp"
+      parameters:
+        source: "/tmp/mcp_test/test.txt"
+        destination: "/tmp/mcp_test/test_copy.txt"
+      expected_output: ""
+      timeout: 60
+    - command: "mv"
+      parameters:
+        source: "/tmp/mcp_test/test_copy.txt"
+        destination: "/tmp/mcp_test/test_moved.txt"
+      expected_output: ""
+      timeout: 60
+    - command: "download"
+      parameters: "/tmp/mcp_test/test.txt"
+      expected_output: ""
+      timeout: 120
+    - command: "download_bulk"
+      parameters:
+        paths:
+          - "/tmp/mcp_test/test.txt"
+      expected_output: ""
+      timeout: 120
+    - command: "rm"
+      parameters: "/tmp/mcp_test/test_moved.txt"
+      expected_output: ""
+      timeout: 30
+    - command: "rm"
+      parameters: "/tmp/mcp_test/test.txt"
+      expected_output: ""
+      timeout: 30
+
+    # =======================================================================
+    # Process & Jobs
+    # =======================================================================
+    - command: "ps"
+      parameters: {}
+      expected_output: ""
+      timeout: 60
+    - command: "jobs"
+      parameters: {}
+      expected_output: ""
+      timeout: 30
+
+    # =======================================================================
+    # Environment & System Info
+    # =======================================================================
+    - command: "getenv"
+      parameters: {}
+      expected_output: "PATH"
+      timeout: 30
+    - command: "setenv"
+      parameters: "MCPTEST testvalue"
+      expected_output: ""
+      timeout: 30
+    - command: "getenv"
+      parameters: {}
+      expected_output: "MCPTEST"
+      timeout: 30
+    - command: "unsetenv"
+      parameters: "MCPTEST"
+      expected_output: ""
+      timeout: 30
+    - command: "getuser"
+      parameters: {}
+      expected_output: ""
+      timeout: 30
+    - command: "ifconfig"
+      parameters: {}
+      expected_output: ""
+      timeout: 30
+    - command: "config"
+      parameters: {}
+      expected_output: ""
+      timeout: 30
+    - command: "drives"
+      parameters: {}
+      expected_output: ""
+      timeout: 30
+    - command: "keys"
+      parameters:
+        command: "dumpsession"
+      expected_output: ""
+      timeout: 30
+
+    # =======================================================================
+    # Curl (HTTP request tests against Mythic server)
+    # =======================================================================
+    - command: "curl"
+      parameters:
+        url: "https://MYTHIC_IP:443"
+        method: "GET"
+      expected_output: ""
+      timeout: 60
+    - command: "curl_env_set"
+      parameters:
+        setEnv:
+          - "TESTVAR=testvalue"
+      expected_output: ""
+      timeout: 30
+    - command: "curl_env_get"
+      parameters: {}
+      expected_output: "TESTVAR"
+      timeout: 30
+    - command: "curl_env_clear"
+      parameters:
+        clearEnv:
+          - "TESTVAR"
+      expected_output: ""
+      timeout: 30
+
+    # =======================================================================
+    # Configuration & Control
+    # =======================================================================
+    - command: "print_c2"
+      parameters: {}
+      expected_output: ""
+      timeout: 30
+    - command: "print_p2p"
+      parameters: {}
+      expected_output: ""
+      timeout: 30
+    - command: "shell_config"
+      parameters:
+        shell: "/bin/bash"
+      expected_output: ""
+      timeout: 30
+    - command: "sleep"
+      parameters:
+        interval: 1
+        jitter: 0
+      expected_output: ""
+      timeout: 30

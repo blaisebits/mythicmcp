@@ -1,0 +1,128 @@
+# MythicMCP Integration Test Configuration — Arachne Only
+# Copy to config.yaml and fill in your environment details:
+#   cp config.arachne.yaml config.yaml
+#
+# This tests Arachne (Linux/Windows Go webshell agent) in isolation.
+
+mythic:
+  server_url: "https://MYTHIC_IP:7443"
+  api_token: "eyJ..."
+  # username: "mythic_admin"
+  # password: "your_password_here"
+  timeout: 30
+
+timeouts:
+  payload_generation: 300
+  callback_verification: 120
+  command_execution: 60
+  polling_interval: 5
+
+agents:
+  - name: "arachne"
+    payload_type: "arachne"
+    os: "Linux"
+    filename: "arachne_test"
+    agent_type: "webshell"
+    c2_profiles:
+      - c2_profile: "webshell"
+        c2_profile_parameters:
+          # URL must match the upload_path filename on the target.
+          # Use http:// or https:// to match the target's web server config.
+          url: "http://TARGET_IP/uploads/arachne_test.php"
+          cookie_name: "session"
+          query_param: "id"
+          user_agent: "Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko"
+    build_parameters: []
+    description: "Arachne test payload for Linux targets"
+
+targets:
+  - name: "linux-target"
+    hostname: "debian-vm"
+    os: "Linux"
+    # callback_id: ID of a pre-existing callback on the target (used to
+    # upload the webshell file). This callback must have write access to
+    # the upload_path directory.
+    callback_id: 1
+    # upload_path must be in a www-data-writable directory so the
+    # pre-existing callback can write the file. The filename must match
+    # the c2_profile url path above.
+    upload_path: "/var/www/html/uploads/arachne_test.php"
+    agents:
+      - "arachne"
+
+# Prerequisites:
+#   - A pre-existing callback on the target with write access to upload_path
+#   - A web server on the target serving upload_path over HTTP/HTTPS
+#   - The upload directory must be writable by the callback's user (e.g. www-data)
+#   - The test runner auto-uploads tests/integration/fixtures/test_upload.txt
+#     and substitutes REPLACE_WITH_FILE_ID at runtime. No manual step needed.
+test_commands:
+  arachne:
+    # =======================================================================
+    # Shell & Command Execution
+    # =======================================================================
+    - command: "shell"
+      parameters: "id"
+      expected_output: "uid="
+      timeout: 60
+    - command: "shell"
+      parameters: "uname -a"
+      expected_output: "Linux"
+      timeout: 60
+
+    # =======================================================================
+    # File Operations — sequenced: pwd → ls → mkdir → upload → cat → download → rm
+    # =======================================================================
+    - command: "pwd"
+      parameters: {}
+      expected_output: "/"
+      timeout: 60
+    - command: "ls"
+      parameters:
+        path: "/tmp"
+      expected_output: ""
+      timeout: 60
+    - command: "shell"
+      parameters: "mkdir -p /tmp/mcp_test"
+      expected_output: ""
+      timeout: 30
+    - command: "upload"
+      parameters:
+        file: "REPLACE_WITH_FILE_ID"
+        remote_path: "/tmp/mcp_test/test.txt"
+      expected_output: ""
+      timeout: 120
+    - command: "shell"
+      parameters: "cat /tmp/mcp_test/test.txt"
+      expected_output: "MythicMCP-test-fixture"
+      timeout: 60
+    - command: "download"
+      parameters:
+        file_path: "/tmp/mcp_test/test.txt"
+      expected_output: ""
+      timeout: 120
+    - command: "rm"
+      parameters:
+        path: "/tmp/mcp_test/test.txt"
+      expected_output: ""
+      timeout: 30
+    - command: "shell"
+      parameters: "rmdir /tmp/mcp_test"
+      expected_output: ""
+      timeout: 30
+
+    # =======================================================================
+    # Windows-only commands — requires ASPX webshell on a Windows/IIS target
+    # Uncomment and add a Windows target to test these.
+    # =======================================================================
+    # - command: "cd"
+    #   parameters:
+    #     path: "C:\\Windows\\Temp"
+    #   expected_output: "C:\\Windows\\Temp"
+    #   timeout: 60
+    # - command: "execute_assembly"
+    #   parameters:
+    #     file: "REPLACE_WITH_FILE_ID"
+    #     arguments: ""
+    #   expected_output: ""
+    #   timeout: 120
