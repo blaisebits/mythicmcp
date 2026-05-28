@@ -30,12 +30,18 @@ function Invoke-NativeOutput($Command, [string[]]$Arguments) {
     return $output
 }
 
+$UvPython = @("run", "--no-project", "--python", "3.11", "python")
+
 Step "Reading project version"
-$version = Invoke-NativeOutput "python" @("-c", "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
+$version = Invoke-NativeOutput "uv" ($UvPython + @("-c", "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])"))
 $expectedTag = "v$version"
 
 if ([string]::IsNullOrWhiteSpace($Tag)) {
     $Tag = $expectedTag
+}
+
+if ($Tag -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+$') {
+    throw "tag must look like vMAJOR.MINOR.PATCH; got: $Tag"
 }
 
 if ($Tag -ne $expectedTag) {
@@ -77,6 +83,14 @@ Invoke-Native "uv" @("run", "python", "-m", "pytest", "tests/unit", "-q")
 
 Step "Building package"
 Invoke-Native "uv" @("build", "--python", "3.11")
+
+Step "Smoke testing built wheel"
+$wheelEnv = Join-Path $repoRoot ".local\wheel-smoke"
+Remove-Item -Recurse -Force $wheelEnv -ErrorAction SilentlyContinue
+Invoke-Native "uv" ($UvPython + @("-m", "venv", $wheelEnv))
+$wheelPython = Join-Path $wheelEnv "Scripts\python.exe"
+Invoke-Native $wheelPython @("-m", "pip", "install", "--no-index", "--no-deps", "--find-links", "dist", "mythicmcp==$version")
+Invoke-Native $wheelPython @("-c", "import importlib.metadata as m, importlib.resources as r, mythicmcp; assert m.version('mythicmcp') == mythicmcp.__version__; b=r.files('mythicmcp')/'plugins'/'builtin'; assert (b/'apollo.yaml').is_file(); assert (b/'poseidon.yaml').is_file(); assert (b/'arachne.yaml').is_file(); print('installed wheel imports and bundled plugin configs are present')")
 
 Step "Release preflight passed for $Tag"
 Write-Host "Next:"

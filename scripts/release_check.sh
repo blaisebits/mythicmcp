@@ -8,17 +8,23 @@ REPO_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
 cd "${REPO_ROOT}"
 
 export UV_CACHE_DIR="${UV_CACHE_DIR:-${REPO_ROOT}/.local/uv-cache}"
+UV_PYTHON=(uv run --no-project --python 3.11 python)
 
 step() {
     printf '==> %s\n' "$1"
 }
 
 step "Reading project version"
-VERSION="$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")"
+VERSION="$("${UV_PYTHON[@]}" -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")"
 EXPECTED_TAG="v${VERSION}"
 
 if [[ -z "${TAG}" ]]; then
     TAG="${EXPECTED_TAG}"
+fi
+
+if [[ ! "${TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    printf 'tag must look like vMAJOR.MINOR.PATCH; got: %s\n' "${TAG}" >&2
+    exit 1
 fi
 
 if [[ "${TAG}" != "${EXPECTED_TAG}" ]]; then
@@ -62,6 +68,24 @@ uv run python -m pytest tests/unit -q
 
 step "Building package"
 uv build --python 3.11
+
+step "Smoke testing built wheel"
+WHEEL_ENV="${REPO_ROOT}/.local/wheel-smoke"
+rm -rf "${WHEEL_ENV}"
+"${UV_PYTHON[@]}" -m venv "${WHEEL_ENV}"
+"${WHEEL_ENV}/bin/python" -m pip install --no-index --no-deps --find-links dist "mythicmcp==${VERSION}"
+"${WHEEL_ENV}/bin/python" - <<'PY'
+import importlib.metadata as metadata
+import importlib.resources as resources
+
+import mythicmcp
+
+assert metadata.version("mythicmcp") == mythicmcp.__version__
+builtin = resources.files("mythicmcp") / "plugins" / "builtin"
+for name in ("apollo.yaml", "poseidon.yaml", "arachne.yaml"):
+    assert (builtin / name).is_file(), f"missing bundled plugin config: {name}"
+print("installed wheel imports and bundled plugin configs are present")
+PY
 
 step "Release preflight passed for ${TAG}"
 printf 'Next:\n'
