@@ -1,7 +1,7 @@
 # MythicMCP
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: BSD 3-Clause](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 [![MCP 1.26+](https://img.shields.io/badge/MCP-1.26+-green.svg)](https://modelcontextprotocol.io/)
 
 MythicMCP is an MCP server for the [Mythic](https://github.com/its-a-feature/Mythic) C2 framework. It gives MCP clients a practical tool surface for working with Mythic operations, callbacks, tasks, files, payloads, C2 profiles, and agent-specific commands.
@@ -162,6 +162,15 @@ High-value core tools:
 
 Bundled agent-specific tools are also exposed for Apollo, Poseidon, and Arachne.
 
+Plugin loading tools:
+
+- `list_available_agents` shows discovered builtin and external agent plugins.
+- `load_agent_tools` dynamically exposes an agent's typed plugin tools when `MYTHIC_HOTLOAD` is enabled.
+- `unload_agent_tools` removes an agent's typed plugin tools from the current MCP server.
+- `MYTHIC_AGENTS=apollo,poseidon` can preload selected agent toolsets at startup; use `MYTHIC_AGENTS=all` to preload every discovered agent.
+
+Future dev note: dynamic plugin loading is a compatibility surface and may be deprecated in a future major release in favor of generic callback commands plus startup-configured toolsets.
+
 ## Usage Notes
 
 - Use `callback_id` as the canonical callback identifier for follow-on work.
@@ -239,4 +248,4 @@ MCP startup issues:
 
 ## License
 
-MIT. See [LICENSE](./LICENSE).
+BSD 3-Clause. See [LICENSE](./LICENSE).
